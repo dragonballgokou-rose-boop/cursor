@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+:root {
+  font-family: 'Hiragino Kaku Gothic Pro', 'Noto Sans JP', system-ui, sans-serif;
+  line-height: 1.5;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background-color: #fafafa;
+  color: #1a1a2e;
+}
