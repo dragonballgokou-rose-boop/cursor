@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="ja" data-oshi="rose">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>うちわメーカー · 推し活スケッチブック</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=M+PLUS+Rounded+1c:wght@400;500;700;800&family=Zen+Kaku+Gothic+New:wght@700;900&family=Zen+Kurenaido&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/tokens.css" />
+  <link rel="stylesheet" href="../assets/base.css" />
+  <link rel="stylesheet" href="../assets/nav.css" />
+  <link rel="stylesheet" href="../assets/components.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a href="../index.html" class="site-brand">
+        <span class="site-brand__mark">♡</span>
+        推し活スケッチブック
+      </a>
+      <nav class="site-nav" aria-label="メインナビゲーション">
+        <a class="site-nav__link" href="../index.html">ホーム</a>
+        <a class="site-nav__link" href="tokens.html">トークン</a>
+        <a class="site-nav__link" href="components.html">コンポーネント</a>
+        <a class="site-nav__link" href="patterns.html">パターン</a>
+        <a class="site-nav__link" aria-current="page" href="uchiwa.html">うちわメーカー</a>
+      </nav>
+      <div data-oshi-picker></div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero container container--wide">
+      <span class="page-hero__eyebrow">UCHIWA MAKER</span>
+      <h1 class="page-hero__title">うちわをデザインしよう</h1>
+      <p class="page-hero__lead">
+        公式ジャンボサイズ（うちわ面 285mm × 295mm）でレイアウトを確認しながらデザインできます。
+        SVG / PNG で書き出して、印刷やシール作成にどうぞ。
+      </p>
+    </section>
+
+    <section class="section container container--wide">
+      <div class="editor-layout">
+
+        <!-- ===== Control panel ===== -->
+        <aside class="editor-panel" aria-label="うちわ編集パネル">
+
+          <div class="editor-panel__group">
+            <div class="editor-panel__heading">テンプレート</div>
+            <div style="display:flex; gap: 6px; flex-wrap: wrap;">
+              <button class="btn btn--soft btn--sm" data-template="blank">推し♡</button>
+              <button class="btn btn--soft btn--sm" data-template="pop">指さして！</button>
+              <button class="btn btn--soft btn--sm" data-template="cute">好き♡</button>
+              <button class="btn btn--soft btn--sm" data-template="cool">ROCK</button>
+              <button class="btn btn--soft btn--sm" data-template="name">名前うちわ</button>
+            </div>
+          </div>
+
+          <div class="editor-panel__group">
+            <div class="editor-panel__heading">文字</div>
+            <div class="field">
+              <label class="field__label" for="u-text">テキスト（改行で複数行）</label>
+              <textarea class="textarea" id="u-text" rows="2">推し♡</textarea>
+              <small class="field__hint">3行まで自動でサイズ調整します。</small>
+            </div>
+            <div class="field">
+              <label class="field__label" for="u-font">フォント</label>
+              <select class="select" id="u-font">
+                <option value="uchiwa">うちわ向け（極太角ゴ）</option>
+                <option value="maru">まる ゴシック</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="editor-panel__group">
+            <div class="editor-panel__heading">文字色 <span class="text-mute text-small">(規定: 1色)</span></div>
+            <div class="color-swatches" id="u-fill-presets"></div>
+            <div class="field" style="margin-top: var(--space-3);">
+              <label class="field__label" for="u-fill-color">カスタム文字色</label>
+              <input class="input" type="color" id="u-fill-color" />
+            </div>
+          </div>
+
+          <div class="editor-panel__group">
+            <div class="editor-panel__heading">縁取り</div>
+            <div class="field">
+              <label class="field__label" for="u-o1">内側の縁取り色（白推奨）</label>
+              <input class="input" type="color" id="u-o1" />
+            </div>
+            <div class="field">
+              <label class="field__label" for="u-o1w">内側の太さ</label>
+              <div class="range-row">
+                <input type="range" id="u-o1w" min="0" max="20" value="8" />
+                <span class="range-row__value"><span id="u-o1w-val">8</span></span>
+              </div>
+            </div>
+            <div class="field">
+              <label class="field__label" for="u-o2">外側の縁取り色</label>
+              <input class="input" type="color" id="u-o2" />
+            </div>
+            <div class="field">
+              <label class="field__label" for="u-o2w">外側の太さ</label>
+              <div class="range-row">
+                <input type="range" id="u-o2w" min="0" max="30" value="16" />
+                <span class="range-row__value"><span id="u-o2w-val">16</span></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="editor-panel__group">
+            <div class="editor-panel__heading">背景</div>
+            <div class="color-swatches" id="u-bg-presets"></div>
+            <div class="field" style="margin-top: var(--space-3);">
+              <label class="field__label" for="u-bg-color">カスタム背景色</label>
+              <input class="input" type="color" id="u-bg-color" />
+            </div>
+          </div>
+
+          <div class="editor-panel__group">
+            <div class="editor-panel__heading">装飾</div>
+            <div class="field">
+              <label class="field__label" for="u-deco">装飾の種類</label>
+              <select class="select" id="u-deco">
+                <option value="none">なし</option>
+                <option value="heart" selected>ハート</option>
+                <option value="star">スター</option>
+              </select>
+            </div>
+            <div class="field">
+              <label class="field__label" for="u-deco-color">装飾の色</label>
+              <input class="input" type="color" id="u-deco-color" />
+            </div>
+          </div>
+
+          <div class="editor-panel__group">
+            <div class="editor-panel__heading">表示</div>
+            <label class="checkbox-row">
+              <input type="checkbox" id="u-handle" checked />
+              持ち手を表示する
+            </label>
+          </div>
+
+          <div class="editor-panel__group">
+            <div class="editor-panel__heading">書き出し</div>
+            <div style="display: grid; gap: 8px;">
+              <button class="btn btn--primary" id="u-export-png">PNG で書き出す（4x）</button>
+              <button class="btn btn--soft btn--sm" id="u-export-png-print">PNG 印刷用（8x ≒ 300dpi）</button>
+              <button class="btn btn--ghost btn--sm" id="u-export-svg">SVG で書き出す</button>
+            </div>
+            <small class="field__hint" style="margin-top: 8px;">
+              印刷時は実寸 285×295mm。PNG 8x で長辺 ≒ 3160px。
+            </small>
+          </div>
+        </aside>
+
+        <!-- ===== Preview stage ===== -->
+        <div>
+          <div class="preview-stage">
+            <div id="uchiwa-svg" aria-live="polite"></div>
+            <div class="preview-stage__caption">公式ジャンボうちわ規定: 285×295mm + 持ち手</div>
+          </div>
+
+          <div class="card" style="margin-top: var(--space-4);">
+            <h3 style="margin-bottom: var(--space-2);">作るときのヒント</h3>
+            <ul style="line-height: 1.8; padding-left: 1.2em;">
+              <li>文字色は <strong>1色</strong>（蛍光カラー推奨）が公式規定。</li>
+              <li>縁取りは「白＋もう1色」の2重がオススメ。視認性が一気に上がります。</li>
+              <li>装飾は控えめに。文字を邪魔しない 8 個までで散らしています。</li>
+              <li>「持ち手を表示する」をオフにすると、シール印刷用にうちわ面だけ書き出せます。</li>
+              <li>PNG 8x はおおよそ 300dpi 相当。家庭用プリンタの印刷にも十分。</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">推し活スケッチブック · Design System · うちわメーカー</div>
+  </footer>
+
+  <script src="../assets/theme.js"></script>
+  <script src="../assets/uchiwa.js"></script>
+</body>
+</html>

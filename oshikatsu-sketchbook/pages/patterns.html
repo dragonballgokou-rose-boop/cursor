@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="ja" data-oshi="lavender">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>パターン · 推し活スケッチブック</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=M+PLUS+Rounded+1c:wght@400;500;700;800&family=Zen+Kaku+Gothic+New:wght@700;900&family=Zen+Kurenaido&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/tokens.css" />
+  <link rel="stylesheet" href="../assets/base.css" />
+  <link rel="stylesheet" href="../assets/nav.css" />
+  <link rel="stylesheet" href="../assets/components.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a href="../index.html" class="site-brand">
+        <span class="site-brand__mark">♡</span>
+        推し活スケッチブック
+      </a>
+      <nav class="site-nav" aria-label="メインナビゲーション">
+        <a class="site-nav__link" href="../index.html">ホーム</a>
+        <a class="site-nav__link" href="tokens.html">トークン</a>
+        <a class="site-nav__link" href="components.html">コンポーネント</a>
+        <a class="site-nav__link" aria-current="page" href="patterns.html">パターン</a>
+        <a class="site-nav__link" href="uchiwa.html">うちわメーカー</a>
+      </nav>
+      <div data-oshi-picker></div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero container">
+      <span class="page-hero__eyebrow">PATTERNS</span>
+      <h1 class="page-hero__title">ページパターン</h1>
+      <p class="page-hero__lead">
+        推し活で頻出する画面の組み立て例。コンポーネントを組み合わせて、スケッチブック1ページを構成する作法を見せます。
+      </p>
+    </section>
+
+    <!-- パターン1: 参戦記録ページ -->
+    <section class="section container">
+      <h2 class="section__title">1. 参戦記録ページ</h2>
+      <p class="section__lead">日付・会場・セトリ・感想・チケット控えを1枚にまとめる。</p>
+
+      <article class="card card--page" style="position: relative;">
+        <span class="paper-clip"></span>
+        <div style="display:flex; gap: var(--space-3); flex-wrap: wrap; align-items: center; margin-bottom: var(--space-4);">
+          <span class="washi-tape">2026.05.20 (TUE)</span>
+          <span class="badge">LIVE</span>
+          <span class="badge badge--success">参戦済</span>
+        </div>
+        <h3 style="margin-bottom: 4px;">推しちゃん全国ツアー 2026 -BLOOM-</h3>
+        <p class="text-soft">Zepp DiverCity / 18:00 OPEN / SEAT A-12</p>
+
+        <div class="grid" style="margin-top: var(--space-6); grid-template-columns: 1.4fr 1fr; gap: var(--space-6);">
+          <div>
+            <h4>セトリ</h4>
+            <ol style="padding-left: 1.2em; line-height: 1.9;">
+              <li>オープニング SE 〜 新曲「BLOOM」</li>
+              <li>あの曲（一番好きなやつ）</li>
+              <li>MC（爆笑）</li>
+              <li>バラードゾーン</li>
+              <li>盛り上がるアンコール</li>
+            </ol>
+          </div>
+          <div>
+            <h4>感想</h4>
+            <p style="font-family: 'Caveat', cursive; font-size: var(--font-size-lg); line-height: 1.4;">
+              冒頭の照明で泣いた。MCで「みんな大好き」って言ってくれた、生きる。
+            </p>
+            <div class="card--polaroid" style="margin-top: var(--space-4); transform: rotate(3deg);">
+              <div class="card--polaroid__photo">📷</div>
+              <div class="card--polaroid__caption">入り口で撮ったやつ</div>
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <!-- パターン2: グッズコレクション -->
+    <section class="section container">
+      <h2 class="section__title">2. グッズコレクション</h2>
+      <p class="section__lead">ポラロイドカードの並びで「集めた感」を演出。</p>
+
+      <div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));">
+        <div class="card--polaroid"><div class="card--polaroid__photo">A</div><div class="card--polaroid__caption">アクスタ #01</div></div>
+        <div class="card--polaroid" style="transform: rotate(2deg);"><div class="card--polaroid__photo">♡</div><div class="card--polaroid__caption">缶バッジ ピンク</div></div>
+        <div class="card--polaroid" style="transform: rotate(-3deg);"><div class="card--polaroid__photo">★</div><div class="card--polaroid__caption">ペンライト</div></div>
+        <div class="card--polaroid" style="transform: rotate(1deg);"><div class="card--polaroid__photo">T</div><div class="card--polaroid__caption">ツアーT XL</div></div>
+      </div>
+    </section>
+
+    <!-- パターン3: 抽選ステータス -->
+    <section class="section container">
+      <h2 class="section__title">3. 抽選・チケット管理</h2>
+      <p class="section__lead">チケット型カードで「公演ごとの状況」を一目で。</p>
+
+      <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));">
+        <div class="card--ticket">
+          <div class="text-small text-mute">FC先行 / 1次抽選</div>
+          <h4 style="margin: 6px 0;">推しちゃん ZeppDH 公演</h4>
+          <div style="display:flex; gap: 6px; margin-top: 4px;"><span class="badge badge--success">当選</span><span class="badge">A-12</span></div>
+        </div>
+        <div class="card--ticket">
+          <div class="text-small text-mute">プレイガイド先行</div>
+          <h4 style="margin: 6px 0;">追加公演 名古屋</h4>
+          <div style="display:flex; gap: 6px; margin-top: 4px;"><span class="badge badge--warn">抽選中</span></div>
+        </div>
+        <div class="card--ticket">
+          <div class="text-small text-mute">一般販売</div>
+          <h4 style="margin: 6px 0;">大阪 2DAYS</h4>
+          <div style="display:flex; gap: 6px; margin-top: 4px;"><span class="badge badge--danger">落選</span><span class="badge badge--info">リセール待ち</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- パターン4: お渡し会 / 接触メモ -->
+    <section class="section container">
+      <h2 class="section__title">4. お渡し会・接触メモ</h2>
+      <p class="section__lead">話したことを忘れたくない人向け。方眼カード＋手書き風で。</p>
+
+      <article class="card card--grid">
+        <div style="display:flex; gap: var(--space-3); flex-wrap: wrap; align-items: center; margin-bottom: var(--space-3);">
+          <span class="washi-tape">お渡し会</span>
+          <span class="washi-tape" style="background: repeating-linear-gradient(135deg, rgba(255,255,255,0.4) 0, rgba(255,255,255,0.4) 6px, rgba(255,255,255,0) 6px, rgba(255,255,255,0) 12px), var(--oshi-mint);">2026.05.21</span>
+        </div>
+        <h4>話した内容</h4>
+        <p style="font-family: 'Caveat', cursive; font-size: var(--font-size-lg); line-height: 1.5;">
+          ・「いつも応援ありがとう」って言ってくれた<br>
+          ・うちわ褒められた（！！！！！！）<br>
+          ・髪型変えたねって気づいてくれた、神
+        </p>
+        <h4 style="margin-top: var(--space-4);">次回までにやること</h4>
+        <label class="checkbox-row"><input type="checkbox" /> 新しいうちわ作る</label><br>
+        <label class="checkbox-row"><input type="checkbox" checked /> 髪を切らずに伸ばす</label>
+      </article>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">推し活スケッチブック · Design System</div>
+  </footer>
+
+  <script src="../assets/theme.js"></script>
+</body>
+</html>

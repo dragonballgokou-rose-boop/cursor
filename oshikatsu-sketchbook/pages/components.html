@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="ja" data-oshi="sakura">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>コンポーネント · 推し活スケッチブック</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=M+PLUS+Rounded+1c:wght@400;500;700;800&family=Zen+Kaku+Gothic+New:wght@700;900&family=Zen+Kurenaido&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/tokens.css" />
+  <link rel="stylesheet" href="../assets/base.css" />
+  <link rel="stylesheet" href="../assets/nav.css" />
+  <link rel="stylesheet" href="../assets/components.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a href="../index.html" class="site-brand">
+        <span class="site-brand__mark">♡</span>
+        推し活スケッチブック
+      </a>
+      <nav class="site-nav" aria-label="メインナビゲーション">
+        <a class="site-nav__link" href="../index.html">ホーム</a>
+        <a class="site-nav__link" href="tokens.html">トークン</a>
+        <a class="site-nav__link" aria-current="page" href="components.html">コンポーネント</a>
+        <a class="site-nav__link" href="patterns.html">パターン</a>
+        <a class="site-nav__link" href="uchiwa.html">うちわメーカー</a>
+      </nav>
+      <div data-oshi-picker></div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero container">
+      <span class="page-hero__eyebrow">COMPONENTS</span>
+      <h1 class="page-hero__title">コンポーネント</h1>
+      <p class="page-hero__lead">
+        推し活ページを組み立てるための部品集。クラス名はそのままコピペで使えます。
+        トークンに連動するため、推し色を切り替えると一括で更新されます。
+      </p>
+    </section>
+
+    <section class="section container">
+      <h2 class="section__title">ボタン</h2>
+      <p class="section__lead">いちばん使うアクション部品。プライマリ・ソフト・ゴースト・ステッカーの4種。</p>
+      <div class="card">
+        <div style="display:flex; gap: var(--space-3); flex-wrap: wrap; align-items: center;">
+          <button class="btn btn--primary">参戦記録をつける</button>
+          <button class="btn btn--soft">下書き保存</button>
+          <button class="btn btn--ghost">キャンセル</button>
+          <button class="btn btn--sticker">グッズ追加</button>
+        </div>
+        <div style="margin-top: var(--space-4); display:flex; gap: var(--space-3); flex-wrap: wrap; align-items: center;">
+          <button class="btn btn--primary btn--lg">大きいプライマリ</button>
+          <button class="btn btn--primary btn--sm">小さい</button>
+        </div>
+        <pre class="code-block" style="margin-top: var(--space-4);">&lt;button class="btn btn--primary"&gt;参戦記録をつける&lt;/button&gt;
+&lt;button class="btn btn--sticker"&gt;グッズ追加&lt;/button&gt;</pre>
+      </div>
+    </section>
+
+    <section class="section container">
+      <h2 class="section__title">バッジ・ステッカー・和紙テープ</h2>
+      <p class="section__lead">情報をピン留めする小さな部品たち。</p>
+      <div class="card">
+        <h4>バッジ</h4>
+        <div style="display:flex; gap: var(--space-2); flex-wrap: wrap;">
+          <span class="badge">LIVE</span>
+          <span class="badge badge--success">参戦済</span>
+          <span class="badge badge--warn">抽選中</span>
+          <span class="badge badge--danger">落選</span>
+          <span class="badge badge--info">配信</span>
+        </div>
+
+        <h4 style="margin-top: var(--space-6)">ステッカー</h4>
+        <div style="display:flex; gap: var(--space-4); flex-wrap: wrap; align-items: center;">
+          <span class="sticker">最高</span>
+          <span class="sticker sticker--circle">推しは<br>尊い。</span>
+          <span class="sticker" style="transform: rotate(4deg)">神セトリ ★</span>
+        </div>
+
+        <h4 style="margin-top: var(--space-6)">和紙テープ</h4>
+        <div style="display:flex; gap: var(--space-3); flex-wrap: wrap; align-items: center;">
+          <span class="washi-tape">2026.05.20</span>
+          <span class="washi-tape" style="background: repeating-linear-gradient(135deg, rgba(255,255,255,0.4) 0, rgba(255,255,255,0.4) 6px, rgba(255,255,255,0) 6px, rgba(255,255,255,0) 12px), var(--oshi-mint);">MEMO</span>
+          <span class="washi-tape" style="background: repeating-linear-gradient(135deg, rgba(255,255,255,0.4) 0, rgba(255,255,255,0.4) 6px, rgba(255,255,255,0) 6px, rgba(255,255,255,0) 12px), var(--oshi-lemon);">Zepp DiverCity</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="section container">
+      <h2 class="section__title">カード</h2>
+      <p class="section__lead">スケッチブック1ページのような単位。ノート罫・方眼・ポラロイド・チケットの4バリエーション。</p>
+      <div class="grid">
+        <div class="card card--page">
+          <h4>ノート罫カード</h4>
+          <p class="text-soft">セトリや感想メモ向き。<code>.card--page</code></p>
+          <p>1. オープニング</p>
+          <p>2. 新曲のあれ</p>
+          <p>3. アンコール</p>
+        </div>
+
+        <div class="card card--grid">
+          <h4>方眼カード</h4>
+          <p class="text-soft">表や設計に。<code>.card--grid</code></p>
+        </div>
+
+        <div class="card--polaroid">
+          <div class="card--polaroid__photo">♡</div>
+          <div class="card--polaroid__caption">2026.05.20 — Zepp DH</div>
+        </div>
+
+        <div class="card--ticket">
+          <div class="text-small text-mute">ADMIT ONE</div>
+          <h4 style="margin: 6px 0;">推しのワンマンライブ</h4>
+          <div class="text-small">SEAT A-12 · 18:00 OPEN</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section container">
+      <h2 class="section__title">フォーム</h2>
+      <p class="section__lead">参戦記録の入力やうちわメーカーで使う入力部品。</p>
+      <div class="card" style="max-width: 520px;">
+        <div class="field">
+          <label class="field__label" for="demo-name">公演名</label>
+          <input class="input" id="demo-name" placeholder="例: 推しちゃん全国ツアー" />
+        </div>
+        <div class="field">
+          <label class="field__label" for="demo-memo">メモ</label>
+          <textarea class="textarea" id="demo-memo" placeholder="神セトリだった……"></textarea>
+        </div>
+        <div class="field">
+          <label class="field__label">推し色を選ぶ</label>
+          <div class="color-swatches">
+            <button aria-pressed="true"  style="background:#ff8fa3"></button>
+            <button aria-pressed="false" style="background:#4ec9a8"></button>
+            <button aria-pressed="false" style="background:#58b8f4"></button>
+            <button aria-pressed="false" style="background:#a78bda"></button>
+            <button aria-pressed="false" style="background:#ffd43b"></button>
+          </div>
+        </div>
+        <div class="field">
+          <label class="field__label">文字サイズ</label>
+          <div class="range-row">
+            <input type="range" min="40" max="200" value="120" />
+            <span class="range-row__value">120</span>
+          </div>
+        </div>
+        <label class="checkbox-row">
+          <input type="checkbox" checked /> ハート装飾を入れる
+        </label>
+      </div>
+    </section>
+
+    <section class="section container">
+      <h2 class="section__title">推し色の連動デモ</h2>
+      <p class="section__lead">右上のスウォッチで推し色を変えると、これらの部品の色が一斉に切り替わります。</p>
+      <div class="card">
+        <div style="display:flex; gap: var(--space-3); flex-wrap: wrap; align-items: center;">
+          <button class="btn btn--primary">プライマリ</button>
+          <button class="btn btn--soft">ソフト</button>
+          <span class="badge">推し色バッジ</span>
+          <span class="sticker">推し最強</span>
+          <span class="washi-tape">推し色テープ</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">推し活スケッチブック · Design System</div>
+  </footer>
+
+  <script src="../assets/theme.js"></script>
+  <script>
+    document.querySelectorAll(".color-swatches").forEach(group => {
+      group.addEventListener("click", e => {
+        const b = e.target.closest("button");
+        if (!b) return;
+        group.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b ? "true" : "false"));
+      });
+    });
+    document.querySelectorAll(".range-row input[type=range]").forEach(r => {
+      const v = r.parentElement.querySelector(".range-row__value");
+      r.addEventListener("input", () => v.textContent = r.value);
+    });
+  </script>
+</body>
+</html>

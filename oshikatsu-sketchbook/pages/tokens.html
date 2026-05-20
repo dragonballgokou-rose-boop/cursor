@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="ja" data-oshi="sakura">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>トークン · 推し活スケッチブック</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=M+PLUS+Rounded+1c:wght@400;500;700;800&family=Zen+Kaku+Gothic+New:wght@700;900&family=Zen+Kurenaido&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/tokens.css" />
+  <link rel="stylesheet" href="../assets/base.css" />
+  <link rel="stylesheet" href="../assets/nav.css" />
+  <link rel="stylesheet" href="../assets/components.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a href="../index.html" class="site-brand">
+        <span class="site-brand__mark">♡</span>
+        推し活スケッチブック
+      </a>
+      <nav class="site-nav" aria-label="メインナビゲーション">
+        <a class="site-nav__link" href="../index.html">ホーム</a>
+        <a class="site-nav__link" aria-current="page" href="tokens.html">トークン</a>
+        <a class="site-nav__link" href="components.html">コンポーネント</a>
+        <a class="site-nav__link" href="patterns.html">パターン</a>
+        <a class="site-nav__link" href="uchiwa.html">うちわメーカー</a>
+      </nav>
+      <div data-oshi-picker></div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero container">
+      <span class="page-hero__eyebrow">TOKENS</span>
+      <h1 class="page-hero__title">デザイントークン</h1>
+      <p class="page-hero__lead">
+        色、タイポグラフィ、余白、角丸、影など全ての基礎値。CSS Custom Properties で公開されているため、
+        他のページからも <code>var(--token-name)</code> でそのまま参照できます。
+      </p>
+    </section>
+
+    <section class="section container">
+      <h2 class="section__title">推しカラー (Oshi colors)</h2>
+      <p class="section__lead">メンバーカラーとしてプリセットされた12色。<code>data-oshi="xxx"</code> で全体のアクセントが連動。</p>
+      <div class="swatch-grid" id="oshi-swatches"></div>
+    </section>
+
+    <section class="section container">
+      <h2 class="section__title">紙・墨 (Paper & Ink)</h2>
+      <p class="section__lead">背景・テキストに使う中立色。スケッチブックの紙のようなあたたかい白を基準に。</p>
+      <div class="swatch-grid" id="neutral-swatches"></div>
+    </section>
+
+    <section class="section container">
+      <h2 class="section__title">タイポグラフィ</h2>
+      <p class="section__lead">丸ゴシック系で「やわらかさ」を、ステンシル太字で「うちわ向け」を担当。</p>
+      <div class="card">
+        <div class="token-row">
+          <div class="token-row__name">--font-display</div>
+          <div class="token-row__preview" style="font-family: var(--font-display); font-size: var(--font-size-xl); font-weight: 700;">推しは光、推しは尊い</div>
+          <div class="token-row__value">Zen Maru Gothic</div>
+        </div>
+        <div class="token-row">
+          <div class="token-row__name">--font-body</div>
+          <div class="token-row__preview" style="font-family: var(--font-body);">ライブ参戦の記録を、推し色のページに残そう。</div>
+          <div class="token-row__value">M PLUS Rounded 1c</div>
+        </div>
+        <div class="token-row">
+          <div class="token-row__name">--font-uchiwa</div>
+          <div class="token-row__preview" style="font-family: var(--font-uchiwa); font-size: var(--font-size-xl); font-weight: 900;">指さして！</div>
+          <div class="token-row__value">Zen Kaku Gothic Black</div>
+        </div>
+        <div class="token-row">
+          <div class="token-row__name">caveat (handwritten)</div>
+          <div class="token-row__preview" style="font-family: 'Caveat', cursive; font-size: var(--font-size-xl);">memo: 神セトリ！</div>
+          <div class="token-row__value">Caveat 500</div>
+        </div>
+      </div>
+
+      <h3 style="margin-top: var(--space-8)">スケール</h3>
+      <div class="card">
+        <div class="token-row"><div class="token-row__name">--font-size-xs</div>  <div class="token-row__preview" style="font-size: var(--font-size-xs)">推し活スケッチブック ABC 123</div>  <div class="token-row__value">12px</div></div>
+        <div class="token-row"><div class="token-row__name">--font-size-sm</div>  <div class="token-row__preview" style="font-size: var(--font-size-sm)">推し活スケッチブック ABC 123</div>  <div class="token-row__value">14px</div></div>
+        <div class="token-row"><div class="token-row__name">--font-size-base</div><div class="token-row__preview" style="font-size: var(--font-size-base)">推し活スケッチブック ABC 123</div><div class="token-row__value">16px</div></div>
+        <div class="token-row"><div class="token-row__name">--font-size-md</div>  <div class="token-row__preview" style="font-size: var(--font-size-md)">推し活スケッチブック ABC 123</div>  <div class="token-row__value">18px</div></div>
+        <div class="token-row"><div class="token-row__name">--font-size-lg</div>  <div class="token-row__preview" style="font-size: var(--font-size-lg)">推し活スケッチブック</div>  <div class="token-row__value">22px</div></div>
+        <div class="token-row"><div class="token-row__name">--font-size-xl</div>  <div class="token-row__preview" style="font-size: var(--font-size-xl)">推し活スケッチブック</div>  <div class="token-row__value">28px</div></div>
+        <div class="token-row"><div class="token-row__name">--font-size-2xl</div> <div class="token-row__preview" style="font-size: var(--font-size-2xl)">推し活</div> <div class="token-row__value">36px</div></div>
+        <div class="token-row"><div class="token-row__name">--font-size-3xl</div> <div class="token-row__preview" style="font-size: var(--font-size-3xl)">推し活</div> <div class="token-row__value">48px</div></div>
+      </div>
+    </section>
+
+    <section class="section container">
+      <h2 class="section__title">余白 (Spacing)</h2>
+      <p class="section__lead">4px ベースのスケール。<code>--space-1</code> から <code>--space-20</code> まで。</p>
+      <div class="card">
+        <div class="token-row"><div class="token-row__name">--space-1</div>  <div class="token-row__preview"><div class="spacing-bar" style="width:4px"></div></div>  <div class="token-row__value">4px</div></div>
+        <div class="token-row"><div class="token-row__name">--space-2</div>  <div class="token-row__preview"><div class="spacing-bar" style="width:8px"></div></div>  <div class="token-row__value">8px</div></div>
+        <div class="token-row"><div class="token-row__name">--space-3</div>  <div class="token-row__preview"><div class="spacing-bar" style="width:12px"></div></div> <div class="token-row__value">12px</div></div>
+        <div class="token-row"><div class="token-row__name">--space-4</div>  <div class="token-row__preview"><div class="spacing-bar" style="width:16px"></div></div> <div class="token-row__value">16px</div></div>
+        <div class="token-row"><div class="token-row__name">--space-6</div>  <div class="token-row__preview"><div class="spacing-bar" style="width:24px"></div></div> <div class="token-row__value">24px</div></div>
+        <div class="token-row"><div class="token-row__name">--space-8</div>  <div class="token-row__preview"><div class="spacing-bar" style="width:32px"></div></div> <div class="token-row__value">32px</div></div>
+        <div class="token-row"><div class="token-row__name">--space-12</div> <div class="token-row__preview"><div class="spacing-bar" style="width:48px"></div></div> <div class="token-row__value">48px</div></div>
+        <div class="token-row"><div class="token-row__name">--space-16</div> <div class="token-row__preview"><div class="spacing-bar" style="width:64px"></div></div> <div class="token-row__value">64px</div></div>
+        <div class="token-row"><div class="token-row__name">--space-20</div> <div class="token-row__preview"><div class="spacing-bar" style="width:80px"></div></div> <div class="token-row__value">80px</div></div>
+      </div>
+    </section>
+
+    <section class="section container">
+      <h2 class="section__title">角丸・影</h2>
+      <div class="grid">
+        <div class="card">
+          <h4>Radius</h4>
+          <div style="display:flex; gap: var(--space-3); align-items: flex-end; flex-wrap: wrap;">
+            <div style="text-align:center"><div class="radius-box" style="border-radius: var(--radius-xs)"></div><div class="text-small text-mute">xs · 4</div></div>
+            <div style="text-align:center"><div class="radius-box" style="border-radius: var(--radius-sm)"></div><div class="text-small text-mute">sm · 8</div></div>
+            <div style="text-align:center"><div class="radius-box" style="border-radius: var(--radius-md)"></div><div class="text-small text-mute">md · 14</div></div>
+            <div style="text-align:center"><div class="radius-box" style="border-radius: var(--radius-lg)"></div><div class="text-small text-mute">lg · 22</div></div>
+            <div style="text-align:center"><div class="radius-box" style="border-radius: var(--radius-xl)"></div><div class="text-small text-mute">xl · 32</div></div>
+            <div style="text-align:center"><div class="radius-box" style="border-radius: var(--radius-pill)"></div><div class="text-small text-mute">pill</div></div>
+          </div>
+        </div>
+        <div class="card">
+          <h4>Shadow</h4>
+          <div style="display:flex; gap: var(--space-6); flex-wrap: wrap;">
+            <div style="text-align:center"><div class="shadow-box" style="box-shadow: var(--shadow-paper)"></div><div class="text-small text-mute">paper</div></div>
+            <div style="text-align:center"><div class="shadow-box" style="box-shadow: var(--shadow-sticker)"></div><div class="text-small text-mute">sticker</div></div>
+            <div style="text-align:center"><div class="shadow-box" style="box-shadow: var(--shadow-pop)"></div><div class="text-small text-mute">pop</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section container">
+      <h2 class="section__title">使い方</h2>
+      <pre class="code-block">/* どの CSS/HTML からでも */
+.my-button {
+  background: var(--oshi-primary);
+  color: var(--oshi-primary-ink);
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-sticker);
+  font-family: var(--font-display);
+}</pre>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">推し活スケッチブック · Design System</div>
+  </footer>
+
+  <script src="../assets/theme.js"></script>
+  <script>
+    // 推しカラースウォッチ表示
+    const oshi = window.OshikatsuTheme.list;
+    document.getElementById("oshi-swatches").innerHTML = oshi.map(o => {
+      const isLight = ["lemon", "white"].includes(o.id);
+      return `<div class="swatch">
+        <div class="swatch__chip ${isLight ? "" : "swatch__chip--light"}" style="background: ${o.hex}">${o.label}</div>
+        <div class="swatch__meta"><code>--oshi-${o.id}</code><span>${o.hex}</span></div>
+      </div>`;
+    }).join("");
+
+    // 中立色
+    const neutrals = [
+      { name: "--color-paper",      hex: "#fffaf3", light: false },
+      { name: "--color-paper-pink", hex: "#fff1f3", light: false },
+      { name: "--color-paper-mint", hex: "#f0fbf6", light: false },
+      { name: "--color-paper-sky",  hex: "#f0f7ff", light: false },
+      { name: "--color-ink",        hex: "#2a2730", light: true  },
+      { name: "--color-ink-soft",   hex: "#5b5666", light: true  },
+      { name: "--color-ink-mute",   hex: "#908a9b", light: true  },
+      { name: "--color-line",       hex: "#e7dcc8", light: false },
+    ];
+    document.getElementById("neutral-swatches").innerHTML = neutrals.map(n => `
+      <div class="swatch">
+        <div class="swatch__chip ${n.light ? "swatch__chip--light" : ""}" style="background: ${n.hex}">${n.name}</div>
+        <div class="swatch__meta"><code>${n.hex}</code></div>
+      </div>`).join("");
+  </script>
+</body>
+</html>

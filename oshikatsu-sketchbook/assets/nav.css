@@ -1,0 +1,103 @@
+/* =========================================================================
+   Oshikatsu Sketchbook — Navigation
+   ========================================================================= */
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(255, 250, 243, 0.92);
+  backdrop-filter: saturate(140%) blur(8px);
+  -webkit-backdrop-filter: saturate(140%) blur(8px);
+  border-bottom: 1px solid var(--color-line);
+}
+
+.site-header__inner {
+  max-width: var(--container-wide);
+  margin-inline: auto;
+  padding: var(--space-3) var(--space-6);
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  flex-wrap: wrap;
+}
+
+.site-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--font-size-md);
+  color: var(--color-ink);
+  border: 0;
+  white-space: nowrap;
+}
+.site-brand:hover { color: var(--oshi-primary-strong); }
+
+.site-brand__mark {
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  background: var(--oshi-primary);
+  display: inline-grid;
+  place-items: center;
+  color: white;
+  font-size: 16px;
+  box-shadow: var(--shadow-sticker);
+  transform: rotate(-4deg);
+}
+
+.site-nav {
+  display: flex;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+.site-nav__link {
+  display: inline-block;
+  padding: 6px 14px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-ink-soft);
+  transition: all var(--motion-base) var(--motion-ease);
+}
+.site-nav__link:hover {
+  background: var(--oshi-primary-soft);
+  color: var(--oshi-primary-strong);
+}
+.site-nav__link[aria-current="page"] {
+  background: var(--oshi-primary);
+  color: var(--oshi-primary-ink);
+}
+
+/* 推しカラーセレクター（テーマ切替） */
+.oshi-picker {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 4px 8px;
+  border: 1px dashed var(--color-line);
+  border-radius: var(--radius-pill);
+}
+.oshi-picker__label {
+  font-size: var(--font-size-xs);
+  color: var(--color-ink-mute);
+  margin-right: 4px;
+}
+.oshi-picker__swatch {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 0 0 1px var(--color-line);
+  cursor: pointer;
+  padding: 0;
+  transition: transform var(--motion-base) var(--motion-bounce);
+}
+.oshi-picker__swatch:hover { transform: scale(1.15); }
+.oshi-picker__swatch[aria-pressed="true"] {
+  box-shadow: 0 0 0 2px var(--color-ink);
+  transform: scale(1.15);
+}

@@ -1,0 +1,153 @@
+/* =========================================================================
+   Oshikatsu Sketchbook — Design Tokens
+   推し活スケッチブック用デザインシステムのトークン定義
+   ========================================================================= */
+
+:root {
+  /* -------------------------------------------------------------
+     Color — Surface (背景・紙)
+     ------------------------------------------------------------- */
+  --color-paper:        #fffaf3;  /* メイン紙色（生成り） */
+  --color-paper-pink:   #fff1f3;  /* ピンク系の紙 */
+  --color-paper-mint:   #f0fbf6;  /* ミント系の紙 */
+  --color-paper-sky:    #f0f7ff;  /* スカイ系の紙 */
+  --color-paper-grid:   #fdf6ec;  /* 方眼ノート用ベース */
+  --color-ink:          #2a2730;  /* メインテキスト（純黒ではなく墨色） */
+  --color-ink-soft:     #5b5666;  /* セカンダリテキスト */
+  --color-ink-mute:     #908a9b;  /* キャプション・補助 */
+  --color-line:         #e7dcc8;  /* 罫線・区切り線 */
+  --color-line-soft:    #f0e6d3;  /* 控えめな線 */
+
+  /* -------------------------------------------------------------
+     Color — Oshi (推しカラー)
+     メンバーカラーとして選択可能なプリセット。
+     `--oshi-primary` を切り替えるとアクセントが連動する。
+     ------------------------------------------------------------- */
+  --oshi-sakura:       #ff8fa3;
+  --oshi-rose:         #e91e63;
+  --oshi-coral:        #ff7a7a;
+  --oshi-tangerine:    #ff9a52;
+  --oshi-lemon:        #ffd43b;
+  --oshi-mint:         #4ec9a8;
+  --oshi-sky:          #58b8f4;
+  --oshi-cobalt:       #3a6fe0;
+  --oshi-lavender:     #a78bda;
+  --oshi-violet:       #7d3cc6;
+  --oshi-white:        #f4f4f6;
+  --oshi-black:        #1a1820;
+
+  /* デフォルト推しカラー（テーマで切り替え可能） */
+  --oshi-primary:        var(--oshi-sakura);
+  --oshi-primary-strong: var(--oshi-rose);
+  --oshi-primary-ink:    #6a1c34;  /* 推しカラー上に乗せる濃い文字色 */
+  --oshi-primary-soft:   #ffe0e6;  /* 推しカラー由来の淡色 */
+
+  /* -------------------------------------------------------------
+     Color — Functional
+     ------------------------------------------------------------- */
+  --color-success: #5fb86a;
+  --color-warning: #f3a847;
+  --color-danger:  #ef5350;
+  --color-info:    #42a5f5;
+
+  /* -------------------------------------------------------------
+     Typography
+     ------------------------------------------------------------- */
+  --font-display: "Zen Maru Gothic", "Hiragino Maru Gothic ProN",
+                  "M PLUS Rounded 1c", system-ui, sans-serif;
+  --font-body:    "M PLUS Rounded 1c", "Hiragino Maru Gothic ProN",
+                  system-ui, sans-serif;
+  --font-mono:    "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+  --font-uchiwa:  "Zen Kaku Gothic Black", "Hiragino Sans", system-ui, sans-serif;
+
+  --font-size-xs:   12px;
+  --font-size-sm:   14px;
+  --font-size-base: 16px;
+  --font-size-md:   18px;
+  --font-size-lg:   22px;
+  --font-size-xl:   28px;
+  --font-size-2xl:  36px;
+  --font-size-3xl:  48px;
+
+  --line-height-tight: 1.2;
+  --line-height-base:  1.6;
+  --line-height-loose: 1.9;
+
+  --letter-spacing-tight: -0.01em;
+  --letter-spacing-base:  0.02em;
+  --letter-spacing-wide:  0.1em;
+
+  /* -------------------------------------------------------------
+     Spacing — 4px ベースのスケール
+     ------------------------------------------------------------- */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+
+  /* -------------------------------------------------------------
+     Radius — まる味（ふんわり）
+     ------------------------------------------------------------- */
+  --radius-xs:   4px;
+  --radius-sm:   8px;
+  --radius-md:   14px;
+  --radius-lg:   22px;
+  --radius-xl:   32px;
+  --radius-pill: 999px;
+
+  /* -------------------------------------------------------------
+     Shadow — 紙の浮き上がり感
+     ------------------------------------------------------------- */
+  --shadow-paper: 0 1px 0 rgba(0, 0, 0, 0.04),
+                  0 4px 16px rgba(110, 80, 60, 0.08);
+  --shadow-sticker: 0 2px 0 rgba(0, 0, 0, 0.08),
+                    0 6px 14px rgba(120, 80, 90, 0.18);
+  --shadow-pop: 0 8px 28px rgba(120, 80, 90, 0.22);
+  --shadow-inset: inset 0 0 0 1px rgba(0, 0, 0, 0.04);
+
+  /* -------------------------------------------------------------
+     Motion
+     ------------------------------------------------------------- */
+  --motion-fast:   120ms;
+  --motion-base:   220ms;
+  --motion-slow:   400ms;
+  --motion-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --motion-ease:   cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* -------------------------------------------------------------
+     Layout
+     ------------------------------------------------------------- */
+  --container-narrow: 720px;
+  --container-base:   960px;
+  --container-wide:   1200px;
+
+  /* -------------------------------------------------------------
+     Uchiwa — 公式ジャンボうちわ規定サイズ
+     ------------------------------------------------------------- */
+  --uchiwa-face-width:  285;  /* mm */
+  --uchiwa-face-height: 295;  /* mm */
+  --uchiwa-corner:      60;   /* mm 角丸 */
+}
+
+/* =========================================================================
+   テーマプリセット — body に data-oshi="xxx" を付けて切り替える
+   ========================================================================= */
+[data-oshi="sakura"]    { --oshi-primary: var(--oshi-sakura);    --oshi-primary-strong: #e85a78; --oshi-primary-soft: #ffe2e8; }
+[data-oshi="rose"]      { --oshi-primary: var(--oshi-rose);      --oshi-primary-strong: #b71c50; --oshi-primary-soft: #ffd6e3; }
+[data-oshi="coral"]     { --oshi-primary: var(--oshi-coral);     --oshi-primary-strong: #d94c4c; --oshi-primary-soft: #ffe1e1; }
+[data-oshi="tangerine"] { --oshi-primary: var(--oshi-tangerine); --oshi-primary-strong: #d96a1a; --oshi-primary-soft: #ffe5cb; }
+[data-oshi="lemon"]     { --oshi-primary: var(--oshi-lemon);     --oshi-primary-strong: #c69b00; --oshi-primary-soft: #fff5c2; }
+[data-oshi="mint"]      { --oshi-primary: var(--oshi-mint);      --oshi-primary-strong: #198a72; --oshi-primary-soft: #cbf2e3; }
+[data-oshi="sky"]       { --oshi-primary: var(--oshi-sky);       --oshi-primary-strong: #1c7ec2; --oshi-primary-soft: #d3eaff; }
+[data-oshi="cobalt"]    { --oshi-primary: var(--oshi-cobalt);    --oshi-primary-strong: #1f44a8; --oshi-primary-soft: #d6e0ff; }
+[data-oshi="lavender"]  { --oshi-primary: var(--oshi-lavender);  --oshi-primary-strong: #6e51b0; --oshi-primary-soft: #e7dcff; }
+[data-oshi="violet"]    { --oshi-primary: var(--oshi-violet);    --oshi-primary-strong: #511f8c; --oshi-primary-soft: #e3d5fb; }
+[data-oshi="white"]     { --oshi-primary: var(--oshi-white);     --oshi-primary-strong: #b1aeb6; --oshi-primary-soft: #f7f7f8; --oshi-primary-ink: #2a2730; }
+[data-oshi="black"]     { --oshi-primary: var(--oshi-black);     --oshi-primary-strong: #000000; --oshi-primary-soft: #d8d6db; --oshi-primary-ink: #fffaf3; }

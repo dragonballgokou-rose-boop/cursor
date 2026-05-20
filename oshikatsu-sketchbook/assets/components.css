@@ -1,0 +1,481 @@
+/* =========================================================================
+   Oshikatsu Sketchbook — Components
+   ========================================================================= */
+
+/* -------------------------------------------------------------------------
+   Button
+   ------------------------------------------------------------------------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: 10px 18px;
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  line-height: 1;
+  border: 2px solid transparent;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: transform var(--motion-base) var(--motion-bounce),
+              box-shadow var(--motion-base) var(--motion-ease),
+              background var(--motion-base) var(--motion-ease),
+              color var(--motion-base) var(--motion-ease);
+  text-decoration: none;
+}
+.btn:focus-visible {
+  outline: 3px solid var(--oshi-primary-soft);
+  outline-offset: 2px;
+}
+.btn:active { transform: translateY(1px); }
+
+.btn--primary {
+  background: var(--oshi-primary);
+  color: var(--oshi-primary-ink);
+  box-shadow: var(--shadow-sticker);
+}
+.btn--primary:hover { transform: translateY(-2px) rotate(-1deg); }
+
+.btn--ghost {
+  background: transparent;
+  color: var(--color-ink);
+  border-color: var(--color-ink);
+}
+.btn--ghost:hover {
+  background: var(--color-ink);
+  color: var(--color-paper);
+}
+
+.btn--soft {
+  background: var(--oshi-primary-soft);
+  color: var(--oshi-primary-strong);
+}
+.btn--soft:hover { background: var(--oshi-primary); color: var(--oshi-primary-ink); }
+
+.btn--sticker {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  border: 2px solid var(--color-ink);
+  box-shadow: 4px 4px 0 var(--oshi-primary);
+  padding: 12px 20px;
+  border-radius: var(--radius-md);
+}
+.btn--sticker:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 var(--oshi-primary); }
+
+.btn--lg { padding: 14px 24px; font-size: var(--font-size-base); }
+.btn--sm { padding: 6px 12px; font-size: var(--font-size-xs); }
+
+/* -------------------------------------------------------------------------
+   Card — スケッチブックページ
+   ------------------------------------------------------------------------- */
+.card {
+  background: var(--color-paper);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-paper);
+  position: relative;
+}
+
+.card--page {
+  /* 横罫線（ノート風） */
+  background-image:
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent 31px,
+      var(--color-line-soft) 31px,
+      var(--color-line-soft) 32px
+    );
+  background-position: 0 var(--space-6);
+}
+
+.card--grid {
+  /* 方眼 */
+  background-image:
+    linear-gradient(var(--color-line-soft) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-line-soft) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.card--polaroid {
+  background: white;
+  padding: 12px 12px 36px;
+  border-radius: 4px;
+  box-shadow: var(--shadow-sticker);
+  transform: rotate(-2deg);
+  transition: transform var(--motion-base) var(--motion-bounce);
+}
+.card--polaroid:hover { transform: rotate(0); }
+.card--polaroid__photo {
+  aspect-ratio: 4 / 5;
+  background: linear-gradient(135deg, var(--oshi-primary-soft), var(--oshi-primary));
+  border-radius: 2px;
+  display: grid;
+  place-items: center;
+  font-size: var(--font-size-2xl);
+  color: var(--oshi-primary-ink);
+}
+.card--polaroid__caption {
+  margin-top: 12px;
+  font-family: "Caveat", "Zen Kurenaido", cursive;
+  font-size: var(--font-size-md);
+  text-align: center;
+  color: var(--color-ink);
+}
+
+.card--ticket {
+  background: linear-gradient(180deg, var(--oshi-primary-soft) 0%, white 100%);
+  border: 0;
+  border-radius: var(--radius-md);
+  position: relative;
+  padding: var(--space-5);
+  overflow: hidden;
+}
+.card--ticket::before,
+.card--ticket::after {
+  content: "";
+  position: absolute;
+  width: 24px; height: 24px;
+  background: var(--color-paper);
+  border-radius: 50%;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.card--ticket::before { left: -12px; }
+.card--ticket::after  { right: -12px; }
+
+/* -------------------------------------------------------------------------
+   Badge / Sticker
+   ------------------------------------------------------------------------- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  background: var(--oshi-primary-soft);
+  color: var(--oshi-primary-strong);
+  border: 1px solid var(--oshi-primary);
+}
+.badge--success { background: #dff5e2; color: #2c7a3f; border-color: #5fb86a; }
+.badge--warn    { background: #fdecd2; color: #8a5a16; border-color: #f3a847; }
+.badge--danger  { background: #fde2e2; color: #8a1f1f; border-color: #ef5350; }
+.badge--info    { background: #ddeefd; color: #1f4f8a; border-color: #42a5f5; }
+
+.sticker {
+  display: inline-grid;
+  place-items: center;
+  padding: 8px 14px;
+  font-weight: 700;
+  background: var(--oshi-primary);
+  color: var(--oshi-primary-ink);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sticker);
+  transform: rotate(-3deg);
+  font-family: var(--font-display);
+}
+.sticker--circle {
+  width: 88px; height: 88px;
+  border-radius: 50%;
+  padding: 0;
+  border: 4px dashed white;
+  outline: 2px solid var(--oshi-primary);
+  outline-offset: -8px;
+  text-align: center;
+  font-size: var(--font-size-sm);
+  line-height: 1.1;
+}
+
+/* 和紙テープ */
+.washi-tape {
+  display: inline-block;
+  padding: 4px 14px;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--color-ink);
+  background:
+    repeating-linear-gradient(
+      135deg,
+      rgba(255,255,255,0.4) 0,
+      rgba(255,255,255,0.4) 6px,
+      rgba(255,255,255,0) 6px,
+      rgba(255,255,255,0) 12px
+    ),
+    var(--oshi-primary-soft);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  letter-spacing: var(--letter-spacing-base);
+  transform: rotate(-2deg);
+}
+.washi-tape::before, .washi-tape::after {
+  content: "";
+  display: inline-block;
+  width: 6px; height: 0;
+}
+
+/* -------------------------------------------------------------------------
+   Form
+   ------------------------------------------------------------------------- */
+.field {
+  display: block;
+  margin-bottom: var(--space-4);
+}
+.field__label {
+  display: block;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--color-ink);
+  margin-bottom: var(--space-1);
+}
+.field__hint {
+  display: block;
+  font-size: var(--font-size-xs);
+  color: var(--color-ink-mute);
+  margin-top: 4px;
+}
+
+.input, .textarea, .select {
+  width: 100%;
+  font: inherit;
+  color: var(--color-ink);
+  padding: 10px 14px;
+  background: white;
+  border: 2px solid var(--color-line);
+  border-radius: var(--radius-md);
+  transition: border-color var(--motion-base) var(--motion-ease),
+              box-shadow var(--motion-base) var(--motion-ease);
+}
+.input:focus, .textarea:focus, .select:focus {
+  outline: none;
+  border-color: var(--oshi-primary);
+  box-shadow: 0 0 0 4px var(--oshi-primary-soft);
+}
+.textarea { min-height: 96px; resize: vertical; line-height: 1.5; }
+
+.input[type="color"] {
+  padding: 4px;
+  height: 44px;
+  cursor: pointer;
+}
+
+.range-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-3);
+  align-items: center;
+}
+.range-row input[type="range"] { width: 100%; accent-color: var(--oshi-primary); }
+.range-row__value {
+  min-width: 3em;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-ink-mute);
+  font-size: var(--font-size-sm);
+}
+
+.color-swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 32px);
+  gap: 6px;
+}
+.color-swatches button {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 0 0 1px var(--color-line);
+  cursor: pointer;
+  padding: 0;
+  transition: transform var(--motion-base) var(--motion-bounce);
+}
+.color-swatches button:hover { transform: scale(1.15); }
+.color-swatches button[aria-pressed="true"] {
+  box-shadow: 0 0 0 3px var(--color-ink);
+  transform: scale(1.15);
+}
+
+.checkbox-row {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+.checkbox-row input { accent-color: var(--oshi-primary); width: 18px; height: 18px; }
+
+/* -------------------------------------------------------------------------
+   Token displays
+   ------------------------------------------------------------------------- */
+.swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--space-3);
+}
+.swatch {
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: white;
+  border: 1px solid var(--color-line);
+  box-shadow: var(--shadow-paper);
+}
+.swatch__chip {
+  height: 80px;
+  display: flex;
+  align-items: flex-end;
+  padding: 8px;
+  color: rgba(0,0,0,0.6);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+.swatch__chip--light { color: rgba(255,255,255,0.95); }
+.swatch__meta {
+  padding: 8px 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: var(--font-size-xs);
+  color: var(--color-ink-soft);
+}
+.swatch__meta code { background: transparent; border: 0; padding: 0; }
+
+.token-row {
+  display: grid;
+  grid-template-columns: 200px 1fr auto;
+  gap: var(--space-4);
+  align-items: center;
+  padding: var(--space-3) 0;
+  border-bottom: 1px dashed var(--color-line);
+}
+.token-row__name { font-family: var(--font-mono); font-size: var(--font-size-sm); color: var(--oshi-primary-strong); }
+.token-row__preview { color: var(--color-ink); }
+.token-row__value { font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--color-ink-mute); }
+
+.spacing-bar {
+  height: 16px;
+  background: var(--oshi-primary);
+  border-radius: 4px;
+}
+
+.radius-box {
+  width: 64px; height: 64px;
+  background: var(--oshi-primary-soft);
+  border: 2px solid var(--oshi-primary);
+  display: inline-block;
+}
+
+.shadow-box {
+  width: 96px; height: 64px;
+  background: white;
+  border-radius: var(--radius-md);
+  display: inline-block;
+}
+
+/* -------------------------------------------------------------------------
+   Code blocks
+   ------------------------------------------------------------------------- */
+.code-block {
+  background: #2a2730;
+  color: #f4f4f6;
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  overflow-x: auto;
+  line-height: 1.5;
+}
+
+/* -------------------------------------------------------------------------
+   Decorative: paper corner clip, star confetti
+   ------------------------------------------------------------------------- */
+.paper-clip {
+  position: absolute;
+  top: -10px; left: 24px;
+  width: 36px; height: 60px;
+  border: 4px solid #b1aeb6;
+  border-bottom-color: transparent;
+  border-radius: 18px 18px 4px 4px;
+  transform: rotate(8deg);
+  pointer-events: none;
+}
+
+.confetti {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.confetti span {
+  position: absolute;
+  width: 10px; height: 10px;
+  display: block;
+}
+.confetti span:nth-child(1) { top: 12%; left: 8%;  background: var(--oshi-sakura);    transform: rotate(15deg); border-radius: 50%; }
+.confetti span:nth-child(2) { top: 24%; left: 88%; background: var(--oshi-mint);      transform: rotate(40deg); }
+.confetti span:nth-child(3) { top: 70%; left: 12%; background: var(--oshi-lemon);     border-radius: 50%; }
+.confetti span:nth-child(4) { top: 80%; left: 78%; background: var(--oshi-lavender);  transform: rotate(20deg); }
+.confetti span:nth-child(5) { top: 50%; left: 50%; background: var(--oshi-sky);       border-radius: 50%; opacity: 0.7; }
+
+/* -------------------------------------------------------------------------
+   Two-column layout for uchiwa editor
+   ------------------------------------------------------------------------- */
+.editor-layout {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: var(--space-8);
+  align-items: start;
+}
+@media (max-width: 880px) {
+  .editor-layout { grid-template-columns: 1fr; }
+}
+
+.editor-panel {
+  background: var(--color-paper);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-line);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-paper);
+  position: sticky;
+  top: 84px;
+}
+@media (max-width: 880px) { .editor-panel { position: static; } }
+
+.editor-panel__group {
+  padding-bottom: var(--space-4);
+  margin-bottom: var(--space-4);
+  border-bottom: 1px dashed var(--color-line);
+}
+.editor-panel__group:last-child { border-bottom: 0; margin-bottom: 0; padding-bottom: 0; }
+.editor-panel__heading {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  margin-bottom: var(--space-2);
+  color: var(--color-ink-soft);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wide);
+}
+
+.preview-stage {
+  background: var(--color-paper-grid);
+  border-radius: var(--radius-lg);
+  border: 1px dashed var(--color-line);
+  padding: var(--space-6);
+  display: grid;
+  place-items: center;
+  min-height: 480px;
+  position: relative;
+}
+.preview-stage__caption {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  font-size: var(--font-size-xs);
+  color: var(--color-ink-mute);
+}
+
+#uchiwa-svg {
+  width: min(100%, 380px);
+  height: auto;
+  filter: drop-shadow(0 12px 24px rgba(0,0,0,0.18));
+}

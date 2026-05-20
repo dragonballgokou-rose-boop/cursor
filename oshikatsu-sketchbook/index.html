@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ja" data-oshi="sakura">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>推し活スケッチブック — Design System</title>
+  <meta name="description" content="推し活スケッチブックのためのデザインシステム。トークン、コンポーネント、うちわメーカー付き。" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=M+PLUS+Rounded+1c:wght@400;500;700;800&family=Zen+Kaku+Gothic+New:wght@700;900&family=Zen+Kurenaido&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/tokens.css" />
+  <link rel="stylesheet" href="assets/base.css" />
+  <link rel="stylesheet" href="assets/nav.css" />
+  <link rel="stylesheet" href="assets/components.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a href="index.html" class="site-brand">
+        <span class="site-brand__mark">♡</span>
+        推し活スケッチブック
+      </a>
+      <nav class="site-nav" aria-label="メインナビゲーション">
+        <a class="site-nav__link" aria-current="page" href="index.html">ホーム</a>
+        <a class="site-nav__link" href="pages/tokens.html">トークン</a>
+        <a class="site-nav__link" href="pages/components.html">コンポーネント</a>
+        <a class="site-nav__link" href="pages/patterns.html">パターン</a>
+        <a class="site-nav__link" href="pages/uchiwa.html">うちわメーカー</a>
+      </nav>
+      <div data-oshi-picker></div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero container">
+      <div class="confetti" aria-hidden="true">
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
+      <span class="page-hero__eyebrow">Design System v0.1</span>
+      <h1 class="page-hero__title">推しの色で、思い出を綴る。</h1>
+      <p class="page-hero__lead">
+        ライブ・イベント・配信の記録をまとめる「推し活スケッチブック」のための
+        デザインシステムです。色やコンポーネントを推しに合わせて切り替えられ、
+        オフィシャル規定サイズのうちわまで作れます。
+      </p>
+      <div style="display:flex; gap: var(--space-3); flex-wrap: wrap; margin-top: var(--space-6);">
+        <a class="btn btn--primary btn--lg" href="pages/uchiwa.html">うちわを作る →</a>
+        <a class="btn btn--sticker" href="pages/components.html">コンポーネントを見る</a>
+      </div>
+    </section>
+
+    <section class="section container">
+      <h2 class="section__title">このシステムでできること</h2>
+      <p class="section__lead">推し活の「楽しい！」を構造化したUIキット。スケッチブックのページを作る感覚で、推しごとに切り替え可能。</p>
+      <div class="grid">
+
+        <article class="card">
+          <div class="washi-tape">DESIGN TOKENS</div>
+          <h3 style="margin-top: var(--space-3)">推しカラー対応トークン</h3>
+          <p class="text-soft">12色のメンバーカラープリセット。<code>data-oshi</code> を切り替えるだけで全画面の色がふんわり連動。</p>
+          <a class="btn btn--soft btn--sm" href="pages/tokens.html">トークン一覧 →</a>
+        </article>
+
+        <article class="card">
+          <div class="washi-tape" style="background: repeating-linear-gradient(135deg, rgba(255,255,255,0.4) 0, rgba(255,255,255,0.4) 6px, rgba(255,255,255,0) 6px, rgba(255,255,255,0) 12px), var(--oshi-mint);">COMPONENTS</div>
+          <h3 style="margin-top: var(--space-3)">スケッチブック部品</h3>
+          <p class="text-soft">ボタン、カード、ステッカー、和紙テープ、ポラロイド、チケット — 推し活で使う部品をまとめて。</p>
+          <a class="btn btn--soft btn--sm" href="pages/components.html">部品カタログ →</a>
+        </article>
+
+        <article class="card">
+          <div class="washi-tape" style="background: repeating-linear-gradient(135deg, rgba(255,255,255,0.4) 0, rgba(255,255,255,0.4) 6px, rgba(255,255,255,0) 6px, rgba(255,255,255,0) 12px), var(--oshi-lavender);">PATTERNS</div>
+          <h3 style="margin-top: var(--space-3)">ページパターン</h3>
+          <p class="text-soft">セトリ、参戦記録、グッズ一覧、お渡し会メモ — よく作る画面の組み立て例。</p>
+          <a class="btn btn--soft btn--sm" href="pages/patterns.html">パターン集 →</a>
+        </article>
+
+        <article class="card" style="grid-column: span 1;">
+          <div class="washi-tape" style="background: repeating-linear-gradient(135deg, rgba(255,255,255,0.4) 0, rgba(255,255,255,0.4) 6px, rgba(255,255,255,0) 6px, rgba(255,255,255,0) 12px), var(--oshi-tangerine);">UCHIWA MAKER</div>
+          <h3 style="margin-top: var(--space-3)">うちわメーカー</h3>
+          <p class="text-soft">公式ジャンボサイズ（285×295mm）でデザイン。プレビュー → PNG/SVG 書き出し対応。</p>
+          <a class="btn btn--primary btn--sm" href="pages/uchiwa.html">作る →</a>
+        </article>
+      </div>
+    </section>
+
+    <section class="section container">
+      <h2 class="section__title">推しカラーを試す</h2>
+      <p class="section__lead">右上のスウォッチをクリックすると、ページ全体のアクセントが推しの色に切り替わります。</p>
+
+      <div class="grid">
+        <div class="sticker sticker--circle">推しは<br>尊い。</div>
+        <button class="btn btn--primary">参戦記録をつける</button>
+        <span class="badge">LIVE</span>
+        <span class="washi-tape">2026.05.20 ZeppDH</span>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      推し活スケッチブック · Design System · <code>oshikatsu-sketchbook</code>
+    </div>
+  </footer>
+
+  <script src="assets/theme.js"></script>
+</body>
+</html>
