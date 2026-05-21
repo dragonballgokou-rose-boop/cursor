@@ -115,9 +115,15 @@
       const tspans = lines.map((s, i) =>
         `<tspan x="${el.x}" y="${el.y + el.size + i * lineH}">${escapeXML(s)}</tspan>`
       ).join("");
+      const outlineW = +el.outlineW || 0;
+      const strokeAttrs = outlineW > 0
+        ? `stroke="${el.outline || "#ffffff"}" stroke-width="${outlineW}"
+           stroke-linejoin="round" stroke-linecap="round"
+           paint-order="stroke fill"`
+        : "";
       return `<text ${tr}
         font-family='${font.family}' font-weight="${font.weight}" font-size="${el.size}"
-        fill="${el.color}">${tspans}</text>`;
+        fill="${el.color}" ${strokeAttrs}>${tspans}</text>`;
     }
     if (el.type === "washi") {
       // 和紙テープ：斜めストライプ＋色
@@ -267,6 +273,7 @@
 
     let extra = "";
     if (el.type === "text") {
+      const outlineW = +el.outlineW || 0;
       extra = `
         <div class="field">
           <label class="field__label">テキスト</label>
@@ -288,6 +295,17 @@
         <div class="field">
           <label class="field__label">文字色</label>
           <input class="input" type="color" value="${el.color}" data-prop="color" />
+        </div>
+        <div class="field">
+          <label class="field__label">フチ（縁取り）</label>
+          <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center;">
+            <input class="input" type="color" value="${el.outline || "#ffffff"}" data-prop="outline" style="width: 44px; height: 36px; padding: 2px;"/>
+            <div class="range-row">
+              <input type="range" min="0" max="8" step="0.5" value="${outlineW}" data-prop="outlineW" />
+              <span class="range-row__value"><span data-bind="outlineW">${outlineW}</span></span>
+            </div>
+          </div>
+          <small class="field__hint">幅 0 でフチなし。白＋濃い文字色が見やすい組み合わせ。</small>
         </div>
       `;
     }
@@ -403,6 +421,7 @@
     addElement({
       type: "text", x: 10, y: 20, w: paper().w - 20, h: 16,
       text: "ライブ最高だった！", color: "#2a2730", size: 12, font: "hand",
+      outline: "#ffffff", outlineW: 0,
     });
   }
   function addWashi() {
@@ -710,7 +729,7 @@
       if (!t) return;
       const prop = t.dataset.prop;
       let val = t.value;
-      if (["w", "h", "size", "rotation"].includes(prop)) val = +val;
+      if (["w", "h", "size", "rotation", "outlineW"].includes(prop)) val = +val;
       const patch = { [prop]: val };
       // mm-range live readout
       const lo = insp.querySelector(`[data-bind="${prop}"]`);
