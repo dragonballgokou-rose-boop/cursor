@@ -479,3 +479,233 @@
   height: auto;
   filter: drop-shadow(0 12px 24px rgba(0,0,0,0.18));
 }
+
+/* =========================================================================
+   Sketchbook Editor
+   ========================================================================= */
+.sb-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr 280px;
+  gap: var(--space-6);
+  align-items: start;
+}
+@media (max-width: 1080px) {
+  .sb-layout { grid-template-columns: 1fr; }
+}
+
+.sb-panel {
+  background: var(--color-paper);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-line);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-paper);
+  position: sticky;
+  top: 84px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+}
+@media (max-width: 1080px) { .sb-panel { position: static; max-height: none; } }
+
+.sb-panel__group {
+  padding-bottom: var(--space-3);
+  margin-bottom: var(--space-3);
+  border-bottom: 1px dashed var(--color-line);
+}
+.sb-panel__group:last-child { border-bottom: 0; }
+
+.sb-panel__heading {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+  color: var(--color-ink-soft);
+  margin-bottom: var(--space-2);
+}
+
+.sb-add-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.sb-add-buttons .btn {
+  padding: 8px;
+  font-size: var(--font-size-xs);
+  justify-content: flex-start;
+}
+
+/* ステージ（プレビュー用紙） */
+.sb-stage-wrap {
+  background: var(--color-paper-grid);
+  border-radius: var(--radius-lg);
+  border: 1px dashed var(--color-line);
+  padding: var(--space-5);
+  display: grid;
+  place-items: center;
+  min-height: 540px;
+  position: relative;
+}
+
+.sb-stage {
+  position: relative;
+  width: 100%;
+  max-width: 520px;
+  display: flex;
+  justify-content: center;
+}
+
+.sb-surface {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  background: var(--color-paper);
+  border-radius: 4px;
+  box-shadow: 0 12px 32px rgba(80, 60, 80, 0.18);
+  overflow: hidden;
+  transition: outline-color var(--motion-base) var(--motion-ease);
+  outline: 2px dashed transparent;
+}
+.sb-surface.is-dragover { outline-color: var(--oshi-primary); }
+
+.sb-surface[data-overlay="grid"]::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(0,0,0,0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,0,0,0.06) 1px, transparent 1px);
+  background-size: 6% 6%;
+}
+.sb-surface[data-overlay="ruled"]::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background-image: repeating-linear-gradient(
+    to bottom, transparent 0, transparent calc(8% - 1px),
+    rgba(160,120,80,0.18) calc(8% - 1px), rgba(160,120,80,0.18) 8%);
+}
+.sb-surface[data-overlay="dot"]::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background-image: radial-gradient(rgba(0,0,0,0.22) 0.6px, transparent 0.6px);
+  background-size: 4% 4%;
+}
+
+.sb-layer {
+  width: 100%;
+  height: 100%;
+  display: block;
+  position: relative;
+}
+
+#sb-handles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.sb-handle {
+  position: absolute;
+  border: 1.5px dashed transparent;
+  border-radius: 4px;
+  cursor: grab;
+  pointer-events: auto;
+  touch-action: none;
+}
+.sb-handle:hover { border-color: rgba(255, 87, 145, 0.6); }
+.sb-handle.is-selected {
+  border-color: var(--oshi-primary-strong);
+  border-style: solid;
+  box-shadow: 0 0 0 2px var(--oshi-primary-soft);
+}
+
+.sb-stage__caption {
+  position: absolute;
+  bottom: 10px;
+  left: 14px;
+  font-size: var(--font-size-xs);
+  color: var(--color-ink-mute);
+}
+
+/* 要素リスト */
+.sb-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.sb-list__item {
+  display: grid;
+  grid-template-columns: 24px 1fr auto;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: white;
+  cursor: pointer;
+  font-size: var(--font-size-xs);
+}
+.sb-list__item:hover { border-color: var(--color-line); }
+.sb-list__item.is-selected { border-color: var(--oshi-primary); background: var(--oshi-primary-soft); }
+.sb-list__icon { font-family: var(--font-mono); text-align: center; }
+.sb-list__label {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.sb-list__buttons { display: flex; gap: 2px; }
+.sb-list__buttons button {
+  width: 22px; height: 22px;
+  background: transparent;
+  border: 1px solid var(--color-line);
+  border-radius: 4px;
+  font-size: 10px;
+  cursor: pointer;
+  color: var(--color-ink-soft);
+  padding: 0;
+}
+.sb-list__buttons button:hover { background: var(--oshi-primary-soft); color: var(--oshi-primary-strong); }
+
+/* インスペクタ */
+.sb-inspector__title {
+  font-weight: 700;
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px dashed var(--color-line);
+}
+
+/* フラッシュ */
+.sb-flash {
+  position: fixed;
+  left: 50%;
+  top: 80px;
+  transform: translateX(-50%) translateY(-10px);
+  padding: 8px 16px;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  border-radius: var(--radius-pill);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--motion-base) var(--motion-ease),
+              transform var(--motion-base) var(--motion-ease);
+  z-index: 100;
+  box-shadow: var(--shadow-pop);
+}
+.sb-flash.is-visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* 色プリセット (sketchbook用) */
+#sb-bg-presets {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+#sb-bg-presets button {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 0 0 1px var(--color-line);
+  cursor: pointer;
+  padding: 0;
+}
+#sb-bg-presets button[aria-pressed="true"] {
+  box-shadow: 0 0 0 2px var(--color-ink);
+}

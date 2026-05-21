@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="ja" data-oshi="sakura">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>スケッチブック · 推し活スケッチブック</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=M+PLUS+Rounded+1c:wght@400;500;700;800&family=Zen+Kaku+Gothic+New:wght@700;900&family=Zen+Kurenaido&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/tokens.css" />
+  <link rel="stylesheet" href="../assets/base.css" />
+  <link rel="stylesheet" href="../assets/nav.css" />
+  <link rel="stylesheet" href="../assets/components.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a href="../index.html" class="site-brand">
+        <span class="site-brand__mark">♡</span>
+        推し活スケッチブック
+      </a>
+      <nav class="site-nav" aria-label="メインナビゲーション">
+        <a class="site-nav__link" href="../index.html">ホーム</a>
+        <a class="site-nav__link" href="tokens.html">トークン</a>
+        <a class="site-nav__link" href="components.html">コンポーネント</a>
+        <a class="site-nav__link" href="patterns.html">パターン</a>
+        <a class="site-nav__link" aria-current="page" href="sketchbook.html">スケッチブック</a>
+        <a class="site-nav__link" href="uchiwa.html">うちわメーカー</a>
+      </nav>
+      <div data-oshi-picker></div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero container container--wide">
+      <span class="page-hero__eyebrow">SKETCHBOOK EDITOR</span>
+      <h1 class="page-hero__title">スケッチブックを作ろう</h1>
+      <p class="page-hero__lead">
+        画像・テキスト・和紙テープ・ステッカーを並べて、推し活の1ページを組み立てます。
+        コンビニで印刷できる L判 / 2L判 / ましかく / KGサイズ / A4 などのプリセット、
+        書き出しは 300dpi の PNG。ドラッグで移動、右パネルでサイズ・回転を微調整。
+      </p>
+    </section>
+
+    <section class="section container container--wide">
+      <div class="sb-layout">
+        <!-- ===== Left panel: 紙設定 / 追加 ===== -->
+        <aside class="sb-panel" aria-label="紙と要素の追加">
+          <div class="sb-panel__group">
+            <div class="sb-panel__heading">紙サイズ</div>
+            <div class="field">
+              <select class="select" id="sb-paper"></select>
+              <small class="field__hint">セブン / ローソン / ファミマ のマルチコピー機で印刷できるサイズです。</small>
+            </div>
+          </div>
+
+          <div class="sb-panel__group">
+            <div class="sb-panel__heading">背景</div>
+            <div id="sb-bg-presets"></div>
+            <div class="field" style="margin-top: 8px;">
+              <input class="input" type="color" id="sb-bg-color" />
+            </div>
+            <div class="field">
+              <label class="field__label">オーバーレイ</label>
+              <select class="select" id="sb-bg-overlay"></select>
+            </div>
+          </div>
+
+          <div class="sb-panel__group">
+            <div class="sb-panel__heading">要素を追加</div>
+            <div class="sb-add-buttons">
+              <button class="btn btn--primary" id="sb-add-photo">🖼 画像</button>
+              <button class="btn btn--soft"    id="sb-add-text">T テキスト</button>
+              <button class="btn btn--soft"    id="sb-add-washi">▰ 和紙テープ</button>
+              <button class="btn btn--soft"    id="sb-add-heart">♡ ハート</button>
+              <button class="btn btn--soft"    id="sb-add-star">★ スター</button>
+              <button class="btn btn--soft"    id="sb-add-circle">● 丸シール</button>
+            </div>
+            <input type="file" accept="image/*" multiple id="sb-add-photo-input" hidden />
+            <small class="field__hint" style="margin-top: 8px; display:block;">
+              画像はプレビューにドラッグ＆ドロップも OK。複数枚一度に入れられます。
+            </small>
+          </div>
+
+          <div class="sb-panel__group">
+            <div class="sb-panel__heading">保存</div>
+            <div style="display: grid; gap: 6px;">
+              <button class="btn btn--ghost btn--sm" id="sb-save">ブラウザに保存</button>
+              <button class="btn btn--ghost btn--sm" id="sb-load">保存を読み込む</button>
+              <button class="btn btn--ghost btn--sm" id="sb-clear">全消去</button>
+            </div>
+          </div>
+
+          <div class="sb-panel__group">
+            <div class="sb-panel__heading">書き出し</div>
+            <div style="display: grid; gap: 6px;">
+              <button class="btn btn--primary"      id="sb-export-png">PNG 印刷用 (300dpi)</button>
+              <button class="btn btn--soft btn--sm" id="sb-export-png-screen">PNG 画面用 (150dpi)</button>
+              <button class="btn btn--ghost btn--sm" id="sb-export-svg">SVG で書き出す</button>
+            </div>
+          </div>
+        </aside>
+
+        <!-- ===== Center: プレビュー ===== -->
+        <div>
+          <div class="sb-stage-wrap">
+            <div class="sb-stage" id="sb-stage">
+              <div class="sb-surface" id="sb-surface">
+                <svg id="sb-layer" class="sb-layer" xmlns="http://www.w3.org/2000/svg"></svg>
+                <div id="sb-handles"></div>
+              </div>
+            </div>
+            <div class="sb-stage__caption">プレビュー（実寸ではありません）</div>
+          </div>
+
+          <div class="card" style="margin-top: var(--space-4);">
+            <h3 style="margin-bottom: var(--space-2);">コンビニ印刷の手順</h3>
+            <ol style="line-height: 1.8; padding-left: 1.4em;">
+              <li>左パネルから紙サイズを選び、内容を作る。</li>
+              <li>「PNG 印刷用 (300dpi)」をクリックして PNG をダウンロード。</li>
+              <li>各社のアプリ・ネット予約サービスに PNG をアップロード。
+                <ul style="margin-top: 4px;">
+                  <li><strong>セブン-イレブン</strong>: かんたん netprint / netprint アプリ</li>
+                  <li><strong>ローソン / ファミリーマート</strong>: PrintSmash / ネットワークプリント</li>
+                </ul>
+              </li>
+              <li>店舗のマルチコピー機で「写真プリント」または「普通紙プリント」を選び、用紙サイズを合わせて出力。</li>
+            </ol>
+            <p class="text-mute text-small" style="margin-top: var(--space-3);">
+              ※ 写真プリントは多くの店舗で L判 / 2L判 / ましかく / KGサイズに対応。A4・A3 は普通紙プリント側です。
+              フチなし／フチありの選択は店舗の機械で行ってください。
+            </p>
+          </div>
+        </div>
+
+        <!-- ===== Right panel: 要素リスト・インスペクタ ===== -->
+        <aside class="sb-panel" aria-label="要素のリストと編集">
+          <div class="sb-panel__group">
+            <div class="sb-panel__heading">要素一覧</div>
+            <div id="sb-list" class="sb-list"></div>
+          </div>
+          <div class="sb-panel__group">
+            <div class="sb-panel__heading">編集</div>
+            <div id="sb-inspector"></div>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <div class="sb-flash" id="sb-flash"></div>
+
+  <footer class="site-footer">
+    <div class="container">推し活スケッチブック · Design System · Sketchbook Editor</div>
+  </footer>
+
+  <script src="../assets/theme.js"></script>
+  <script src="../assets/sketchbook.js"></script>
+</body>
+</html>
