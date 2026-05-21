@@ -763,6 +763,36 @@
   transform: translateX(-50%) translateY(0);
 }
 
+/* 縦・横トグル */
+.sb-orient {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  background: var(--color-paper-grid);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+}
+.sb-orient button {
+  padding: 8px 12px;
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--color-ink-soft);
+  transition: background var(--motion-base) var(--motion-ease),
+              color var(--motion-base) var(--motion-ease);
+}
+.sb-orient button:hover { background: var(--oshi-primary-soft); color: var(--oshi-primary-strong); }
+.sb-orient button[aria-pressed="true"] {
+  background: var(--oshi-primary);
+  color: var(--oshi-primary-ink);
+  box-shadow: var(--shadow-sticker);
+}
+
 /* 色プリセット (sketchbook用) */
 #sb-bg-presets {
   display: grid;

@@ -6,18 +6,15 @@
 (function () {
   "use strict";
 
-  /* コンビニ印刷でよく使う紙サイズ（mm） */
+  /* コンビニ印刷でよく使う紙サイズ（mm） — 縦向きを基準。横向きはトグルで切り替え */
   const PAPERS = {
-    "l":        { id: "l",        label: "L判",         w: 89,  h: 127 },
-    "l-land":   { id: "l-land",   label: "L判 横",      w: 127, h: 89  },
-    "2l":       { id: "2l",       label: "2L判",        w: 127, h: 178 },
-    "2l-land":  { id: "2l-land",  label: "2L判 横",     w: 178, h: 127 },
-    "square":   { id: "square",   label: "ましかく",    w: 89,  h: 89  },
-    "kg":       { id: "kg",       label: "KGサイズ",    w: 102, h: 152 },
-    "a4":       { id: "a4",       label: "A4 縦",       w: 210, h: 297 },
-    "a4-land":  { id: "a4-land",  label: "A4 横",       w: 297, h: 210 },
-    "b5":       { id: "b5",       label: "B5",          w: 182, h: 257 },
-    "a3":       { id: "a3",       label: "A3",          w: 297, h: 420 },
+    "l":      { id: "l",      label: "L判",      w: 89,  h: 127 },
+    "2l":     { id: "2l",     label: "2L判",     w: 127, h: 178 },
+    "square": { id: "square", label: "ましかく", w: 89,  h: 89  },
+    "kg":     { id: "kg",     label: "KGサイズ", w: 102, h: 152 },
+    "a4":     { id: "a4",     label: "A4",       w: 210, h: 297 },
+    "b5":     { id: "b5",     label: "B5",       w: 182, h: 257 },
+    "a3":     { id: "a3",     label: "A3",       w: 297, h: 420 },
   };
 
   /* 背景プリセット */
@@ -57,6 +54,7 @@
   /* ===== state ===== */
   const state = {
     paper: "2l",
+    orientation: "portrait",  // "portrait" | "landscape"
     bgColor: "#fffaf3",
     bgOverlay: "none",
     elements: [],     // { id, type, x, y, w, h, rotation, ... }
@@ -68,7 +66,13 @@
   let stage, surface, layer;
 
   /* ========== Geometry helpers ========== */
-  function paper() { return PAPERS[state.paper]; }
+  function paper() {
+    const p = PAPERS[state.paper] || PAPERS["2l"];
+    if (state.orientation === "landscape" && p.w !== p.h) {
+      return { id: p.id, label: p.label, w: p.h, h: p.w };
+    }
+    return p;
+  }
   function mmToScreen() {
     // SVG viewBox は mm 単位。surface の幅を mm/px 比に使う。
     return surface.getBoundingClientRect().width / paper().w;
@@ -445,11 +449,15 @@
   }
 
   /* ========== Pointer interaction ========== */
+  const activePointers = new Map(); // pointerId -> { x, y, elId }
+  let pinchState = null;            // 2本指ピンチ中の状態
+  let singleDragCleanup = null;     // 1本指ドラッグ中のクリーンアップ関数
+
   function setupPointerDrag() {
     const overlay = $("sb-handles");
 
     overlay.addEventListener("pointerdown", (e) => {
-      // リサイズ・回転のグリップ
+      // リサイズ・回転のグリップ（既存挙動）
       const grip = e.target.closest("[data-grip]");
       if (grip) {
         e.stopPropagation();
@@ -467,13 +475,39 @@
       const id = +target.dataset.id;
       const el = state.elements.find((x) => x.id === id);
       if (!el) return;
-      // 選択がまだなら、まず選択だけしてハンドルを表示
-      if (state.selectedId !== id) {
-        state.selectedId = id;
-        render();
+
+      activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY, elId: id });
+      try { target.setPointerCapture(e.pointerId); } catch (_) {}
+
+      // 既に選択中の要素に 2 本目の指が乗ったらピンチ開始
+      const samePtrs = [...activePointers.entries()].filter(([_id, p]) => p.elId === id);
+      if (samePtrs.length === 2) {
+        // 1本指ドラッグが走っていたら止める
+        if (singleDragCleanup) { singleDragCleanup(); singleDragCleanup = null; }
+        startPinch(el, samePtrs.map(([_id, p]) => p));
+        return;
       }
-      startMove(el, e, target);
+
+      // 1本指：選択→移動
+      if (state.selectedId !== id) { state.selectedId = id; render(); }
+      singleDragCleanup = startMove(el, e, target);
     });
+
+    document.addEventListener("pointermove", (e) => {
+      const p = activePointers.get(e.pointerId);
+      if (p) { p.x = e.clientX; p.y = e.clientY; }
+      if (pinchState) updatePinch();
+    });
+    function endPointer(e) {
+      const wasActive = activePointers.has(e.pointerId);
+      activePointers.delete(e.pointerId);
+      if (pinchState && wasActive) {
+        // 1本だけ離れたらピンチ終了（残りは特に何もしない）
+        endPinch();
+      }
+    }
+    document.addEventListener("pointerup", endPointer);
+    document.addEventListener("pointercancel", endPointer);
 
     // 背景タップで選択解除
     surface.addEventListener("click", (e) => {
@@ -484,28 +518,93 @@
     });
   }
 
+  function startPinch(el, twoPtrs) {
+    const [p1, p2] = twoPtrs;
+    const surfRect = surface.getBoundingClientRect();
+    const ratio = mmToScreen();
+    pinchState = {
+      el,
+      surfRect,
+      ratio,
+      startD: Math.hypot(p2.x - p1.x, p2.y - p1.y),
+      startA: Math.atan2(p2.y - p1.y, p2.x - p1.x),
+      startMid: { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 },
+      startCenter: { x: el.x + el.w / 2, y: el.y + el.h / 2 },
+      startW: el.w,
+      startH: el.h,
+      startRot: el.rotation || 0,
+      ids: [...activePointers.entries()].filter(([_id, p]) => p.elId === el.id).map(([id]) => id),
+    };
+  }
+
+  function updatePinch() {
+    const [id1, id2] = pinchState.ids;
+    const p1 = activePointers.get(id1);
+    const p2 = activePointers.get(id2);
+    if (!p1 || !p2) return;
+    const { el, surfRect, ratio, startD, startA, startMid, startCenter, startW, startH, startRot } = pinchState;
+
+    const newD = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+    const newA = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+    const newMid = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+
+    const scale = Math.max(0.05, newD / Math.max(startD, 1));
+    const dRotRad = newA - startA;
+
+    // 元 mid → center のオフセット (mm)
+    const offMmX = startCenter.x - (startMid.x - surfRect.left) / ratio;
+    const offMmY = startCenter.y - (startMid.y - surfRect.top) / ratio;
+    // オフセットを回転＆スケール
+    const cosR = Math.cos(dRotRad);
+    const sinR = Math.sin(dRotRad);
+    const newOffX = (offMmX * cosR - offMmY * sinR) * scale;
+    const newOffY = (offMmX * sinR + offMmY * cosR) * scale;
+    // 新しい mid (mm)
+    const newMidMmX = (newMid.x - surfRect.left) / ratio;
+    const newMidMmY = (newMid.y - surfRect.top) / ratio;
+    // 新しい中心
+    const newCenterX = newMidMmX + newOffX;
+    const newCenterY = newMidMmY + newOffY;
+
+    el.w = Math.max(8, startW * scale);
+    el.h = Math.max(8, startH * scale);
+    el.x = newCenterX - el.w / 2;
+    el.y = newCenterY - el.h / 2;
+    let r = startRot + dRotRad * 180 / Math.PI;
+    while (r > 180) r -= 360;
+    while (r < -180) r += 360;
+    el.rotation = Math.round(r * 10) / 10;
+    render();
+  }
+
+  function endPinch() {
+    pinchState = null;
+  }
+
   function startMove(el, e, target) {
     const ratio = mmToScreen();
     const startMX = e.clientX;
     const startMY = e.clientY;
     const startElX = el.x;
     const startElY = el.y;
-    target.setPointerCapture?.(e.pointerId);
+    try { target.setPointerCapture(e.pointerId); } catch (_) {}
 
     function onMove(ev) {
+      if (pinchState) return; // ピンチに切り替わったら無視
       const dx = (ev.clientX - startMX) / ratio;
       const dy = (ev.clientY - startMY) / ratio;
-      el.x = Math.max(0, Math.min(paper().w - el.w, startElX + dx));
-      el.y = Math.max(0, Math.min(paper().h - el.h, startElY + dy));
+      el.x = Math.max(-el.w / 2, Math.min(paper().w - el.w / 2, startElX + dx));
+      el.y = Math.max(-el.h / 2, Math.min(paper().h - el.h / 2, startElY + dy));
       render();
     }
-    function onUp() {
-      target.releasePointerCapture?.(e.pointerId);
+    function cleanup() {
+      try { target.releasePointerCapture(e.pointerId); } catch (_) {}
       document.removeEventListener("pointermove", onMove);
-      document.removeEventListener("pointerup", onUp);
+      document.removeEventListener("pointerup", cleanup);
     }
     document.addEventListener("pointermove", onMove);
-    document.addEventListener("pointerup", onUp);
+    document.addEventListener("pointerup", cleanup);
+    return cleanup;
   }
 
   function startResize(el, grip, e, target) {
@@ -747,11 +846,20 @@
       if (!raw) return flash("保存データがありません");
       const data = JSON.parse(raw);
       Object.assign(state, data);
+      // 旧フォーマット (l-land / 2l-land / a4-land) を新形式に変換
+      if (state.paper && state.paper.endsWith("-land")) {
+        state.paper = state.paper.slice(0, -5);
+        state.orientation = "landscape";
+      }
+      if (!state.orientation) state.orientation = "portrait";
       state.selectedId = null;
       // UI 同期
       $("sb-paper").value = state.paper;
       $("sb-bg-color").value = state.bgColor;
       $("sb-bg-overlay").value = state.bgOverlay;
+      $("sb-orient")?.querySelectorAll("[data-orient]").forEach((x) =>
+        x.setAttribute("aria-pressed", x.dataset.orient === state.orientation ? "true" : "false")
+      );
       render();
       flash("読み込みました");
     } catch (e) { flash("読み込みに失敗"); }
@@ -788,6 +896,24 @@
       clampElementsToPaper();
       render();
     });
+
+    // 縦・横トグル
+    const orientHost = $("sb-orient");
+    if (orientHost) {
+      orientHost.addEventListener("click", (e) => {
+        const b = e.target.closest("[data-orient]");
+        if (!b) return;
+        state.orientation = b.dataset.orient;
+        orientHost.querySelectorAll("[data-orient]").forEach((x) =>
+          x.setAttribute("aria-pressed", x === b ? "true" : "false")
+        );
+        clampElementsToPaper();
+        render();
+      });
+      orientHost.querySelectorAll("[data-orient]").forEach((x) =>
+        x.setAttribute("aria-pressed", x.dataset.orient === state.orientation ? "true" : "false")
+      );
+    }
 
     // 背景プリセット
     const bp = $("sb-bg-presets");

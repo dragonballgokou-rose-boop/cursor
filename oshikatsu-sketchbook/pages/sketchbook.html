@@ -50,6 +50,13 @@
             <div class="sb-panel__heading">紙サイズ</div>
             <div class="field">
               <select class="select" id="sb-paper"></select>
+            </div>
+            <div class="field">
+              <label class="field__label">向き</label>
+              <div class="sb-orient" id="sb-orient" role="group" aria-label="紙の向き">
+                <button type="button" data-orient="portrait"  aria-pressed="true">▯ 縦</button>
+                <button type="button" data-orient="landscape" aria-pressed="false">▭ 横</button>
+              </div>
               <small class="field__hint">セブン / ローソン / ファミマ のマルチコピー機で印刷できるサイズです。</small>
             </div>
           </div>
@@ -111,6 +118,16 @@
               </div>
             </div>
             <div class="sb-stage__caption">プレビュー（実寸ではありません）</div>
+          </div>
+
+          <div class="card" style="margin-top: var(--space-4);">
+            <h3 style="margin-bottom: var(--space-2);">操作のコツ</h3>
+            <ul style="line-height: 1.8; padding-left: 1.2em;">
+              <li><strong>1本指でドラッグ</strong>: 移動</li>
+              <li><strong>2本指でピンチ</strong>: 拡大・縮小・回転（PC ならコーナーの□ ／ 上の↻ハンドルを使用）</li>
+              <li><strong>背景をタップ</strong>: 選択解除</li>
+              <li>右の編集パネルでも数値で細かく調整できます</li>
+            </ul>
           </div>
 
           <div class="card" style="margin-top: var(--space-4);">
