@@ -609,7 +609,79 @@
 .sb-handle.is-selected {
   border-color: var(--oshi-primary-strong);
   border-style: solid;
-  box-shadow: 0 0 0 2px var(--oshi-primary-soft);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.65);
+}
+
+/* リサイズ・回転ハンドル */
+.sb-grip {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  background: white;
+  border: 2px solid var(--oshi-primary-strong);
+  border-radius: 4px;
+  pointer-events: auto;
+  touch-action: none;
+  z-index: 2;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+.sb-grip--nw { top: -11px;    left: -11px;   cursor: nwse-resize; }
+.sb-grip--ne { top: -11px;    right: -11px;  cursor: nesw-resize; }
+.sb-grip--sw { bottom: -11px; left: -11px;   cursor: nesw-resize; }
+.sb-grip--se { bottom: -11px; right: -11px;  cursor: nwse-resize; }
+
+.sb-grip--rot {
+  top: -44px;
+  left: 50%;
+  margin-left: -14px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--oshi-primary);
+  border-color: white;
+  box-shadow: 0 0 0 2px var(--oshi-primary-strong), 0 1px 4px rgba(0, 0, 0, 0.2);
+  cursor: grab;
+}
+.sb-grip--rot::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  width: 2px;
+  height: 18px;
+  background: var(--oshi-primary-strong);
+  transform: translateX(-50%);
+}
+.sb-grip--rot::before {
+  content: "↻";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: white;
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+/* タッチ端末ではハンドルを大きく */
+@media (pointer: coarse) {
+  .sb-grip {
+    width: 34px;
+    height: 34px;
+  }
+  .sb-grip--nw, .sb-grip--ne { top: -17px; }
+  .sb-grip--sw, .sb-grip--se { bottom: -17px; }
+  .sb-grip--nw, .sb-grip--sw { left: -17px; }
+  .sb-grip--ne, .sb-grip--se { right: -17px; }
+  .sb-grip--rot {
+    top: -56px;
+    margin-left: -20px;
+    width: 40px;
+    height: 40px;
+  }
+  .sb-grip--rot::after { height: 24px; }
+  .sb-grip--rot::before { font-size: 20px; }
 }
 
 .sb-stage__caption {

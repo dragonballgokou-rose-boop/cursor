@@ -203,10 +203,17 @@
       const width  = el.w * ratio;
       const height = el.h * ratio;
       const selected = el.id === state.selectedId;
+      const grips = selected ? `
+        <div class="sb-grip sb-grip--nw"  data-grip="nw"  data-id="${el.id}"></div>
+        <div class="sb-grip sb-grip--ne"  data-grip="ne"  data-id="${el.id}"></div>
+        <div class="sb-grip sb-grip--sw"  data-grip="sw"  data-id="${el.id}"></div>
+        <div class="sb-grip sb-grip--se"  data-grip="se"  data-id="${el.id}"></div>
+        <div class="sb-grip sb-grip--rot" data-grip="rot" data-id="${el.id}" title="ドラッグで回転"></div>
+      ` : "";
       return `<div class="sb-handle ${selected ? "is-selected" : ""}" data-id="${el.id}"
         style="left:${left}px; top:${top}px; width:${width}px; height:${height}px;
                transform: rotate(${el.rotation || 0}deg); transform-origin: center;"
-        title="${el.type}"></div>`;
+        title="${el.type}">${grips}</div>`;
     }).join("");
   }
 
@@ -281,7 +288,8 @@
       `;
     }
     if (el.type === "photo") {
-      extra = `<p class="text-small text-mute">画像は隅の枠を白で縁取って表示しています（ポラロイド風）。サイズはバーで、位置はドラッグで変更。</p>`;
+      extra = `<p class="text-small text-mute">画像はポラロイド風に白縁付き。
+        プレビュー上で<strong>角をドラッグでサイズ変更</strong>、<strong>上の○をドラッグで回転</strong>、ドラッグで移動できます。比率は自動で維持されます。</p>`;
     }
     if (el.type === "washi") {
       extra = `
@@ -416,10 +424,15 @@
       // 画像の自然サイズで縦横比を取る
       const img = new Image();
       img.onload = () => {
-        const ratio = img.naturalWidth / img.naturalHeight;
-        let w = Math.min(paper().w * 0.6, 100);
-        let h = w / ratio;
-        if (h > paper().h * 0.7) { h = paper().h * 0.7; w = h * ratio; }
+        const naturalRatio = (img.naturalWidth && img.naturalHeight)
+          ? img.naturalWidth / img.naturalHeight : 1;
+        // 紙の 70% を初期サイズに（縦長／横長に応じてはみ出さないようクランプ）
+        let w = paper().w * 0.7;
+        let h = w / naturalRatio;
+        if (h > paper().h * 0.8) {
+          h = paper().h * 0.8;
+          w = h * naturalRatio;
+        }
         addElement({
           type: "photo", src,
           x: (paper().w - w) / 2, y: (paper().h - h) / 2,
@@ -436,46 +449,156 @@
     const overlay = $("sb-handles");
 
     overlay.addEventListener("pointerdown", (e) => {
+      // リサイズ・回転のグリップ
+      const grip = e.target.closest("[data-grip]");
+      if (grip) {
+        e.stopPropagation();
+        const id = +grip.dataset.id;
+        const el = state.elements.find((x) => x.id === id);
+        if (!el) return;
+        state.selectedId = id;
+        if (grip.dataset.grip === "rot") startRotate(el, e, grip);
+        else startResize(el, grip.dataset.grip, e, grip);
+        return;
+      }
+
       const target = e.target.closest("[data-id]");
       if (!target) { state.selectedId = null; render(); return; }
       const id = +target.dataset.id;
-      state.selectedId = id;
       const el = state.elements.find((x) => x.id === id);
       if (!el) return;
-      const ratio = mmToScreen();
-      const rect = surface.getBoundingClientRect();
-      const startMouseX = e.clientX - rect.left;
-      const startMouseY = e.clientY - rect.top;
-      const startElX = el.x;
-      const startElY = el.y;
-      target.setPointerCapture(e.pointerId);
-      let moved = false;
-
-      function onMove(ev) {
-        const dx = (ev.clientX - rect.left - startMouseX) / ratio;
-        const dy = (ev.clientY - rect.top  - startMouseY) / ratio;
-        el.x = Math.max(0, Math.min(paper().w - el.w, startElX + dx));
-        el.y = Math.max(0, Math.min(paper().h - el.h, startElY + dy));
-        moved = true;
+      // 選択がまだなら、まず選択だけしてハンドルを表示
+      if (state.selectedId !== id) {
+        state.selectedId = id;
         render();
       }
-      function onUp(ev) {
-        target.releasePointerCapture?.(e.pointerId);
-        document.removeEventListener("pointermove", onMove);
-        document.removeEventListener("pointerup", onUp);
-        if (!moved) render(); // 単純なクリックでも選択を反映
-      }
-      document.addEventListener("pointermove", onMove);
-      document.addEventListener("pointerup", onUp);
+      startMove(el, e, target);
     });
 
-    // 背景クリックで選択解除
+    // 背景タップで選択解除
     surface.addEventListener("click", (e) => {
       if (e.target === surface || e.target === layer) {
         state.selectedId = null;
         render();
       }
     });
+  }
+
+  function startMove(el, e, target) {
+    const ratio = mmToScreen();
+    const startMX = e.clientX;
+    const startMY = e.clientY;
+    const startElX = el.x;
+    const startElY = el.y;
+    target.setPointerCapture?.(e.pointerId);
+
+    function onMove(ev) {
+      const dx = (ev.clientX - startMX) / ratio;
+      const dy = (ev.clientY - startMY) / ratio;
+      el.x = Math.max(0, Math.min(paper().w - el.w, startElX + dx));
+      el.y = Math.max(0, Math.min(paper().h - el.h, startElY + dy));
+      render();
+    }
+    function onUp() {
+      target.releasePointerCapture?.(e.pointerId);
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+    }
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
+  }
+
+  function startResize(el, grip, e, target) {
+    const ratio = mmToScreen();
+    const startMX = e.clientX;
+    const startMY = e.clientY;
+    const startEl = { x: el.x, y: el.y, w: el.w, h: el.h };
+    const r = (el.rotation || 0) * Math.PI / 180;
+    const cos = Math.cos(r), sin = Math.sin(r);
+
+    // 反対側のコーナー（アンカー）を「画面 mm 座標」で記録 — 回転を考慮
+    const ax = grip.includes("e") ? -startEl.w / 2 : startEl.w / 2;
+    const ay = grip.includes("s") ? -startEl.h / 2 : startEl.h / 2;
+    const centerX = startEl.x + startEl.w / 2;
+    const centerY = startEl.y + startEl.h / 2;
+    const anchorMmX = centerX + (ax * cos - ay * sin);
+    const anchorMmY = centerY + (ax * sin + ay * cos);
+
+    const aspect = startEl.w / startEl.h;
+    const preserveAspect = el.type === "photo" || el.type === "sticker";
+
+    target.setPointerCapture?.(e.pointerId);
+
+    function onMove(ev) {
+      // 画面差分 (mm)
+      const dxS = (ev.clientX - startMX) / ratio;
+      const dyS = (ev.clientY - startMY) / ratio;
+      // 要素ローカル系へ unrotate
+      const dx =  dxS * cos + dyS * sin;
+      const dy = -dxS * sin + dyS * cos;
+
+      let w = startEl.w, h = startEl.h;
+      if (grip.includes("e")) w = Math.max(8, startEl.w + dx);
+      if (grip.includes("w")) w = Math.max(8, startEl.w - dx);
+      if (grip.includes("s")) h = Math.max(8, startEl.h + dy);
+      if (grip.includes("n")) h = Math.max(8, startEl.h - dy);
+
+      if (preserveAspect) {
+        // 比例維持：相対変化の大きい方を採用
+        const wChange = Math.abs(Math.log(w / startEl.w));
+        const hChange = Math.abs(Math.log(h / startEl.h));
+        if (wChange >= hChange) h = w / aspect;
+        else                    w = h * aspect;
+      }
+      // ステッカーは正方形を保つ
+      if (el.type === "sticker") h = w;
+
+      // 新しいアンカー位置（ローカル）から逆算して新しい中心を出す
+      const naxL = grip.includes("e") ? -w / 2 : w / 2;
+      const nayL = grip.includes("s") ? -h / 2 : h / 2;
+      const newCx = anchorMmX - (naxL * cos - nayL * sin);
+      const newCy = anchorMmY - (naxL * sin + nayL * cos);
+
+      el.x = newCx - w / 2;
+      el.y = newCy - h / 2;
+      el.w = w;
+      el.h = h;
+      render();
+    }
+    function onUp() {
+      target.releasePointerCapture?.(e.pointerId);
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+    }
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
+  }
+
+  function startRotate(el, e, target) {
+    const box = handlesHost().querySelector(`.sb-handle[data-id="${el.id}"]`);
+    const rect = box.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top  + rect.height / 2;
+    const startAngle = Math.atan2(e.clientY - cy, e.clientX - cx);
+    const startRot = el.rotation || 0;
+    target.setPointerCapture?.(e.pointerId);
+
+    function onMove(ev) {
+      const angle = Math.atan2(ev.clientY - cy, ev.clientX - cx);
+      let rot = startRot + (angle - startAngle) * 180 / Math.PI;
+      while (rot > 180)  rot -= 360;
+      while (rot < -180) rot += 360;
+      if (ev.shiftKey) rot = Math.round(rot / 15) * 15; // Shift で 15° スナップ
+      el.rotation = Math.round(rot * 10) / 10;
+      render();
+    }
+    function onUp() {
+      target.releasePointerCapture?.(e.pointerId);
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+    }
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
   }
 
   /* ========== Inspector input binding ========== */
