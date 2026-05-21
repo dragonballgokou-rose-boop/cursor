@@ -80,23 +80,34 @@
 
   /* ========== Render ========== */
   function render() {
-    const p = paper();
-
-    // 紙の比率を CSS aspect-ratio で
-    surface.style.aspectRatio = `${p.w} / ${p.h}`;
-    surface.style.background = state.bgColor;
-    surface.dataset.overlay = state.bgOverlay;
-
-    // SVG レイヤを再構築
-    layer.setAttribute("viewBox", `0 0 ${p.w} ${p.h}`);
-    layer.setAttribute("preserveAspectRatio", "xMidYMid meet");
-
-    layer.innerHTML = state.elements.map((el) => renderElement(el)).join("");
-
-    // ハンドル（HTML overlay）
+    renderSurface();
+    renderLayer();
     renderHandles();
     renderElementList();
     renderInspector();
+  }
+
+  // インスペクタを作り直さず、SVG / ハンドル / リストだけ更新するライト版。
+  // テキスト入力中に呼ぶと iOS のキーリピートや IME 確定が途切れない。
+  function renderQuiet() {
+    renderSurface();
+    renderLayer();
+    renderHandles();
+    renderElementList();
+  }
+
+  function renderSurface() {
+    const p = paper();
+    surface.style.aspectRatio = `${p.w} / ${p.h}`;
+    surface.style.background = state.bgColor;
+    surface.dataset.overlay = state.bgOverlay;
+  }
+
+  function renderLayer() {
+    const p = paper();
+    layer.setAttribute("viewBox", `0 0 ${p.w} ${p.h}`);
+    layer.setAttribute("preserveAspectRatio", "xMidYMid meet");
+    layer.innerHTML = state.elements.map((el) => renderElement(el)).join("");
   }
 
   function renderElement(el) {
@@ -376,13 +387,6 @@
     el.rotation = el.rotation ?? 0;
     state.elements.push(el);
     state.selectedId = el.id;
-    render();
-  }
-
-  function update(id, patch) {
-    const el = state.elements.find((e) => e.id === id);
-    if (!el) return;
-    Object.assign(el, patch);
     render();
   }
 
@@ -727,14 +731,17 @@
       if (!id) return;
       const t = e.target.closest("[data-prop]");
       if (!t) return;
+      const el = state.elements.find((x) => x.id === id);
+      if (!el) return;
       const prop = t.dataset.prop;
       let val = t.value;
       if (["w", "h", "size", "rotation", "outlineW"].includes(prop)) val = +val;
-      const patch = { [prop]: val };
-      // mm-range live readout
+      el[prop] = val;
+      // ライブ表示の数値
       const lo = insp.querySelector(`[data-bind="${prop}"]`);
       if (lo) lo.textContent = val;
-      update(id, patch);
+      // インスペクタ自体は再描画しない（textarea のフォーカス/キーリピート保持）
+      renderQuiet();
     });
     insp.addEventListener("click", (e) => {
       const act = e.target.closest("[data-act]")?.dataset.act;
