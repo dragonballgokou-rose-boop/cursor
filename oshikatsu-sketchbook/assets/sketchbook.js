@@ -444,7 +444,8 @@
     });
   }
 
-  function addPhotoFromFile(file) {
+  function addPhotoFromFile(file, batchIndex = 0) {
+    const startingPhotoCount = state.elements.filter((el) => el.type === "photo").length;
     const reader = new FileReader();
     reader.onload = (e) => {
       const src = e.target.result;
@@ -460,9 +461,15 @@
           h = paper().h * 0.8;
           w = h * naturalRatio;
         }
+        // 既存写真と同時投入分の合計だけ右下にズラして配置（重なり防止）
+        const idx = startingPhotoCount + batchIndex;
+        const step = Math.min(paper().w, paper().h) * 0.06;
+        const offX = (idx % 6) * step - 2 * step;
+        const offY = (idx % 6) * step - 2 * step;
         addElement({
           type: "photo", src,
-          x: (paper().w - w) / 2, y: (paper().h - h) / 2,
+          x: Math.max(0, Math.min(paper().w - w, (paper().w - w) / 2 + offX)),
+          y: Math.max(0, Math.min(paper().h - h, (paper().h - h) / 2 + offY)),
           w, h, rotation: 0,
         });
       };
@@ -975,7 +982,7 @@
     const fileInput = $("sb-add-photo-input");
     $("sb-add-photo").addEventListener("click", () => fileInput.click());
     fileInput.addEventListener("change", (e) => {
-      for (const f of e.target.files) addPhotoFromFile(f);
+      [...e.target.files].forEach((f, i) => addPhotoFromFile(f, i));
       fileInput.value = "";
     });
     surface.addEventListener("dragover", (e) => { e.preventDefault(); surface.classList.add("is-dragover"); });
@@ -983,9 +990,9 @@
     surface.addEventListener("drop", (e) => {
       e.preventDefault();
       surface.classList.remove("is-dragover");
-      for (const f of e.dataTransfer.files) {
-        if (f.type.startsWith("image/")) addPhotoFromFile(f);
-      }
+      [...e.dataTransfer.files]
+        .filter((f) => f.type.startsWith("image/"))
+        .forEach((f, i) => addPhotoFromFile(f, i));
     });
 
     // 書き出し
