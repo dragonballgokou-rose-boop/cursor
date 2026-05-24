@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useTrips } from './hooks/useTrips';
 import { useRouting } from './hooks/useRouting';
 import { useSpotSearch } from './hooks/useSpotSearch';
@@ -30,7 +30,9 @@ export default function App() {
     currentTrip?.transportMode || 'driving'
   );
 
-  const { spots, isLoading: spotsLoading, searchSpots, clearSpots } = useSpotSearch();
+  const { spots, isLoading: spotsLoading, searchAlongRoute, clearSpots } = useSpotSearch();
+
+  const [activePanel, setActivePanel] = useState('route'); // 'route' | 'spots'
 
   const handleMapClick = useCallback(
     async (lat, lng) => {
@@ -54,17 +56,24 @@ export default function App() {
     [updateStop]
   );
 
+  const handleSearchRoute = useCallback(() => {
+    if (!routeData?.geometry) return;
+    searchAlongRoute(routeData.geometry, ['onsen', 'tourism', 'food', 'temple']);
+    setActivePanel('spots');
+  }, [routeData, searchAlongRoute]);
+
   const handleAddSpot = useCallback(
     (spot) => {
       if (!currentTrip) return;
       const lastIndex = currentTrip.stops.length - 1;
       addStop(lastIndex);
       setTimeout(() => {
-        const trip = currentTrip;
-        const newStopId = trip.stops[lastIndex]?.id;
-        if (newStopId) {
-          updateStop(newStopId, { name: spot.name, lat: spot.lat, lng: spot.lng, address: spot.name });
-        }
+        updateStop(currentTrip.stops[lastIndex]?.id, {
+          name: spot.name,
+          lat: spot.lat,
+          lng: spot.lng,
+          address: spot.name,
+        });
       }, 50);
     },
     [currentTrip, addStop, updateStop]
@@ -73,20 +82,19 @@ export default function App() {
   const handleBack = useCallback(() => {
     selectTrip(null);
     clearSpots();
+    setActivePanel('route');
   }, [selectTrip, clearSpots]);
 
   if (!currentTrip) {
     return (
       <div className="min-h-screen bg-gray-50">
         <header className="sticky top-0 z-10 bg-white/90 backdrop-blur-sm border-b border-gray-200 shadow-sm">
-          <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                <span className="text-2xl">🗺️</span>
-                旅行ルートプランナー
-              </h1>
-              <p className="text-xs text-gray-500 mt-0.5">旅行のルートを計画・管理</p>
-            </div>
+          <div className="max-w-5xl mx-auto px-4 py-4">
+            <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+              <span className="text-2xl">🗺️</span>
+              旅行ルートプランナー
+            </h1>
+            <p className="text-xs text-gray-500 mt-0.5">ルート沿いのおすすめスポットを発見</p>
           </div>
         </header>
         <div className="max-w-5xl mx-auto">
@@ -101,9 +109,11 @@ export default function App() {
     );
   }
 
+  const hasRoute = !!routeData?.geometry;
+
   return (
     <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
-      <header className="sticky top-0 z-10 bg-white/90 backdrop-blur-sm border-b border-gray-200 shadow-sm">
+      <header className="sticky top-0 z-10 bg-white/90 backdrop-blur-sm border-b border-gray-200 shadow-sm shrink-0">
         <div className="px-4 py-2.5 flex items-center gap-3">
           <button
             onClick={handleBack}
@@ -119,35 +129,66 @@ export default function App() {
             🗺️ {currentTrip.name || '無題の旅行'}
           </h1>
           <div className="flex-1" />
-          <span className="text-xs text-gray-400 hidden md:block">
-            地図クリックで地点追加 · マーカードラッグで位置調整
-          </span>
+
+          {/* Panel toggle */}
+          <div className="flex bg-gray-100 rounded-lg p-0.5">
+            <button
+              onClick={() => setActivePanel('route')}
+              className={`text-xs px-3 py-1 rounded-md font-medium transition-all cursor-pointer ${
+                activePanel === 'route' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500'
+              }`}
+            >
+              ルート
+            </button>
+            <button
+              onClick={() => setActivePanel('spots')}
+              className={`text-xs px-3 py-1 rounded-md font-medium transition-all cursor-pointer ${
+                activePanel === 'spots' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500'
+              }`}
+            >
+              おすすめ {spots.length > 0 && `(${spots.length})`}
+            </button>
+          </div>
         </div>
       </header>
 
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
         {/* Sidebar */}
-        <aside className="w-full md:w-[380px] bg-white border-r border-gray-200 flex flex-col overflow-hidden order-2 md:order-1 max-h-[40vh] md:max-h-none">
-          <div className="flex-1 overflow-y-auto">
-            <RoutePanel
-              trip={currentTrip}
-              routeData={routeData}
-              onUpdateStop={updateStop}
-              onRemoveStop={removeStop}
-              onAddStop={addStop}
-              onReorderStops={reorderStops}
-              onRenameTrip={renameTrip}
-              onSetDepartureTime={setDepartureTime}
-              onSetTransportMode={setTransportMode}
+        <aside className="w-full md:w-[380px] bg-white border-r border-gray-200 flex flex-col overflow-hidden order-2 md:order-1 max-h-[45vh] md:max-h-none">
+          {activePanel === 'route' ? (
+            <div className="flex-1 overflow-y-auto">
+              <RoutePanel
+                trip={currentTrip}
+                routeData={routeData}
+                onUpdateStop={updateStop}
+                onRemoveStop={removeStop}
+                onAddStop={addStop}
+                onReorderStops={reorderStops}
+                onRenameTrip={renameTrip}
+                onSetDepartureTime={setDepartureTime}
+                onSetTransportMode={setTransportMode}
+              />
+              {hasRoute && (
+                <div className="p-3 border-t border-gray-100">
+                  <button
+                    onClick={handleSearchRoute}
+                    disabled={spotsLoading}
+                    className="w-full py-2.5 rounded-xl text-sm font-bold transition-all cursor-pointer bg-gradient-to-r from-sky-500 to-teal-400 text-white hover:from-sky-600 hover:to-teal-500 shadow-sm disabled:opacity-50"
+                  >
+                    {spotsLoading ? '検索中...' : '🔍 ルート沿いのおすすめを探す'}
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <SpotPanel
+              spots={spots}
+              isLoading={spotsLoading}
+              onSearchRoute={handleSearchRoute}
+              onAddSpot={handleAddSpot}
+              hasRoute={hasRoute}
             />
-          </div>
-          <SpotPanel
-            stops={currentTrip.stops}
-            spots={spots}
-            isLoading={spotsLoading}
-            onSearch={searchSpots}
-            onClear={clearSpots}
-          />
+          )}
         </aside>
 
         {/* Map + Summary */}
