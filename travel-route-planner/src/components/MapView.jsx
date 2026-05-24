@@ -91,6 +91,28 @@ function MapClickHandler({ onClick }) {
   return null;
 }
 
+function createStationIcon() {
+  return L.divIcon({
+    className: '',
+    html: `<div style="
+      background: #7c3aed;
+      color: white;
+      width: 22px;
+      height: 22px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      border: 2px solid white;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+    ">🚉</div>`,
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
+    popupAnchor: [0, -12],
+  });
+}
+
 export default function MapView({ stops, routeData, onMapClick, onMarkerDrag, spots = [], onAddSpot }) {
   const validStops = useMemo(() => stops.filter(s => s.lat && s.lng), [stops]);
 
@@ -108,12 +130,27 @@ export default function MapView({ stops, routeData, onMapClick, onMarkerDrag, sp
       <FitBounds stops={stops} />
       <MapClickHandler onClick={onMapClick} />
 
-      {routeData?.geometry && (
+      {routeData?.geometry && !routeData.isTransit && (
         <>
           <Polyline positions={routeData.geometry} color="#0ea5e9" weight={5} opacity={0.6} />
           <Polyline positions={routeData.geometry} color="#0284c7" weight={3} opacity={0.9} dashArray="8,6" />
         </>
       )}
+
+      {routeData?.geometry && routeData.isTransit && (
+        <Polyline positions={routeData.geometry} color="#7c3aed" weight={4} opacity={0.7} dashArray="12,8" />
+      )}
+
+      {routeData?.isTransit && routeData.stations?.filter(Boolean).map((st, i) => (
+        <Marker key={`station-${i}`} position={[st.lat, st.lng]} icon={createStationIcon()}>
+          <Popup>
+            <div style={{ minWidth: '100px' }}>
+              <p style={{ fontWeight: 600, fontSize: '13px', margin: '0 0 2px' }}>🚉 {st.name}</p>
+              {st.operator && <p style={{ fontSize: '11px', color: '#6b7280', margin: 0 }}>{st.operator}</p>}
+            </div>
+          </Popup>
+        </Marker>
+      ))}
 
       {validStops.map((stop, i) => (
         <Marker
