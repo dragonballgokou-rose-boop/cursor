@@ -8,9 +8,11 @@ function createEmptyTrip() {
     name: '新しい旅行',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
+    departureTime: '09:00',
+    transportMode: 'driving',
     stops: [
-      { id: generateId('stop'), name: '', lat: null, lng: null, address: '', memo: '', order: 0 },
-      { id: generateId('stop'), name: '', lat: null, lng: null, address: '', memo: '', order: 1 },
+      { id: generateId('stop'), name: '', lat: null, lng: null, address: '', memo: '', stayMinutes: 0, order: 0 },
+      { id: generateId('stop'), name: '', lat: null, lng: null, address: '', memo: '', stayMinutes: 0, order: 1 },
     ],
   };
 }
@@ -45,6 +47,20 @@ function reducer(state, action) {
           t.id === state.currentTripId ? { ...t, name: action.name, updatedAt: now } : t
         ),
       };
+    case 'SET_DEPARTURE_TIME':
+      return {
+        ...state,
+        trips: state.trips.map(t =>
+          t.id === state.currentTripId ? { ...t, departureTime: action.time, updatedAt: now } : t
+        ),
+      };
+    case 'SET_TRANSPORT_MODE':
+      return {
+        ...state,
+        trips: state.trips.map(t =>
+          t.id === state.currentTripId ? { ...t, transportMode: action.mode, updatedAt: now } : t
+        ),
+      };
     case 'ADD_STOP': {
       return {
         ...state,
@@ -57,6 +73,7 @@ function reducer(state, action) {
             lng: null,
             address: '',
             memo: '',
+            stayMinutes: 30,
             order: action.index,
           };
           const stops = [...t.stops];
@@ -123,6 +140,8 @@ export function useTrips() {
   const selectTrip = useCallback(id => dispatch({ type: 'SELECT_TRIP', id }), []);
   const deleteTrip = useCallback(id => dispatch({ type: 'DELETE_TRIP', id }), []);
   const renameTrip = useCallback(name => dispatch({ type: 'RENAME_TRIP', name }), []);
+  const setDepartureTime = useCallback(time => dispatch({ type: 'SET_DEPARTURE_TIME', time }), []);
+  const setTransportMode = useCallback(mode => dispatch({ type: 'SET_TRANSPORT_MODE', mode }), []);
   const addStop = useCallback(index => dispatch({ type: 'ADD_STOP', index }), []);
   const removeStop = useCallback(stopId => dispatch({ type: 'REMOVE_STOP', stopId }), []);
   const updateStop = useCallback((stopId, data) => dispatch({ type: 'UPDATE_STOP', stopId, data }), []);
@@ -138,6 +157,8 @@ export function useTrips() {
     selectTrip,
     deleteTrip,
     renameTrip,
+    setDepartureTime,
+    setTransportMode,
     addStop,
     removeStop,
     updateStop,

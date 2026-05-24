@@ -14,3 +14,17 @@ export function formatDuration(seconds) {
 export function generateId(prefix = 'id') {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
+
+export function addMinutesToTime(timeStr, minutes) {
+  if (!timeStr) return '';
+  const [h, m] = timeStr.split(':').map(Number);
+  const total = h * 60 + m + Math.round(minutes);
+  const newH = Math.floor(total / 60) % 24;
+  const newM = total % 60;
+  return `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`;
+}
+
+export function formatTime(timeStr) {
+  if (!timeStr) return '';
+  return timeStr;
+}

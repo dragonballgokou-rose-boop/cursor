@@ -2,10 +2,20 @@ import { useState, useEffect, useRef } from 'react';
 
 const OSRM_BASE = 'https://router.project-osrm.org';
 
-export function useRouting(stops) {
+const PROFILES = {
+  driving: { label: '車', icon: '🚗', key: 'driving' },
+  cycling: { label: '自転車', icon: '🚲', key: 'bike' },
+  foot: { label: '徒歩', icon: '🚶', key: 'foot' },
+};
+
+export { PROFILES };
+
+export function useRouting(stops, profile = 'driving') {
   const [routeData, setRouteData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const abortRef = useRef(null);
+
+  const stopsKey = stops.map(s => `${s.lat},${s.lng}`).join('|');
 
   useEffect(() => {
     const validStops = stops.filter(s => s.lat && s.lng);
@@ -22,7 +32,7 @@ export function useRouting(stops) {
 
     setIsLoading(true);
     fetch(
-      `${OSRM_BASE}/route/v1/driving/${coordStr}?overview=full&geometries=geojson&steps=false`,
+      `${OSRM_BASE}/route/v1/${profile}/${coordStr}?overview=full&geometries=geojson&steps=false`,
       { signal: controller.signal }
     )
       .then(res => res.json())
@@ -51,7 +61,7 @@ export function useRouting(stops) {
       .finally(() => setIsLoading(false));
 
     return () => controller.abort();
-  }, [stops.map(s => `${s.lat},${s.lng}`).join('|')]);
+  }, [stopsKey, profile]);
 
   return { routeData, isLoading };
 }
