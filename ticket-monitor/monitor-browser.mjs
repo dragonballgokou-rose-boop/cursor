@@ -29,7 +29,8 @@ const TARGET_URL =
 
 // 公演行は「〔8/20(木)｜東京〕 乃木坂46 …」形式なので、曜日付きで判定して
 // 「販売終了日時: 2026/08/22」のような日付表記への誤検知を防ぐ
-const WATCH_KEYWORDS = (process.env.WATCH_KEYWORDS ?? "8/22(土),8/23(日),8/22（土）,8/23（日）")
+// ※ 8/22(土) は確保済みのため監視対象から外している（誤購入防止）
+const WATCH_KEYWORDS = (process.env.WATCH_KEYWORDS ?? "8/23(日),8/23（日）")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);

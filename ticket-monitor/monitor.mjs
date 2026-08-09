@@ -27,7 +27,8 @@ const TARGET_URL =
   "https://nft.rakuten.co.jp/marketplace/?type=ticket&sort=last_updated_date&limit=12&ticketlimit=6&provider=nogizaka";
 
 // 曜日付きで判定して「販売終了日時: 2026/08/22」等への誤検知を防ぐ
-const WATCH_KEYWORDS = (process.env.WATCH_KEYWORDS ?? "8/22(土),8/23(日),8/22（土）,8/23（日）")
+// ※ 8/22(土) は確保済みのため監視対象から外している（誤購入防止）
+const WATCH_KEYWORDS = (process.env.WATCH_KEYWORDS ?? "8/23(日),8/23（日）")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
