@@ -134,16 +134,41 @@ async function expandAndExtract(kw) {
     section.push(lines[i]);
   }
 
-  // 出品詳細ページ（席を押したあとの画面）のリンクを探す
-  const itemUrl = await page.evaluate(() => {
-    const anchors = Array.from(document.querySelectorAll("a[href]"));
-    const byPrice = anchors.find((a) => /円/.test(a.innerText || ""));
-    if (byPrice) return byPrice.href;
-    const byPath = anchors.find((a) =>
-      /item|detail|ticket\//.test(a.getAttribute("href") || "")
-    );
-    return byPath ? byPath.href : null;
-  });
+  const seatLines = section.filter((l) => SEAT_PATTERN.test(l));
+  let itemUrl = null;
+
+  if (seatLines.length > 0) {
+    // 出品要素そのものをクリックし、遷移した先のURLを「席を押したあとの画面」として採用
+    try {
+      const el = page.getByText(seatLines[0].slice(0, 20)).first();
+      if ((await el.count()) > 0) {
+        const before = page.url();
+        await el.click({ timeout: 2_000 });
+        await page.waitForTimeout(1_200);
+        const after = page.url();
+        if (after !== before && after.includes("nft.rakuten.co.jp")) {
+          itemUrl = after;
+        }
+      }
+    } catch {
+      // クリックで取れなければフォールバックへ
+    }
+
+    if (!itemUrl) {
+      // フォールバック: nft.rakuten.co.jp 内の出品詳細らしいリンクのみ対象
+      //（以前は楽天グループの無関係なリンクを拾っていたため厳しく制限）
+      itemUrl = await page.evaluate(() => {
+        const anchors = Array.from(document.querySelectorAll("a[href]"));
+        const a = anchors.find(
+          (a) =>
+            a.href.includes("nft.rakuten.co.jp") &&
+            /item|detail/.test(a.href) &&
+            !a.href.includes("marketplace/?")
+        );
+        return a ? a.href : null;
+      });
+    }
+  }
 
   // 詳細ページへ遷移していたら一覧に戻しておく
   if (!page.url().startsWith(TARGET_URL.split("?")[0])) {
@@ -151,7 +176,7 @@ async function expandAndExtract(kw) {
       .goto(TARGET_URL, { waitUntil: "domcontentloaded", timeout: 30_000 })
       .catch(() => {});
   }
-  return { section, itemUrl };
+  return { section, seatLines, itemUrl };
 }
 
 async function checkOnce() {
@@ -171,7 +196,7 @@ async function checkOnce() {
     if (alreadyAlerted.has(kw)) continue;
 
     const result = await expandAndExtract(kw);
-    const seatLines = (result?.section ?? []).filter((l) => SEAT_PATTERN.test(l));
+    const seatLines = result?.seatLines ?? [];
 
     if (seatLines.length > 0) {
       // 実際に買える出品がある場合のみ通知する
