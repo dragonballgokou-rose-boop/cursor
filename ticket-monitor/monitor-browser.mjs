@@ -51,16 +51,10 @@ function openBrowser(url) {
   exec(cmd, () => {});
 }
 
-/**
- * 最前面にモーダルダイアログを出す（macOS）。
- * 「開く」を押すと出品ページがブラウザで開く。120秒で自動で閉じる。
- */
-function popupDialog(title, message, url) {
+/** 音声で読み上げて確実に気付かせる（macOS）。操作は一切不要 */
+function speak(message) {
   if (process.platform !== "darwin") return;
-  exec(
-    `osascript -e 'set r to display dialog ${JSON.stringify(message)} with title ${JSON.stringify(title)} buttons {"閉じる","開く"} default button "開く" with icon caution giving up after 120' -e 'if button returned of r is "開く" then open location ${JSON.stringify(url)}'`,
-    () => {}
-  );
+  exec(`say -v Kyoko ${JSON.stringify(message)}`, () => {});
 }
 
 function notify(title, message) {
@@ -201,19 +195,16 @@ async function checkOnce() {
     if (seatLines.length > 0) {
       // 実際に買える出品がある場合のみ通知する
       alreadyAlerted.add(kw);
-      // 出品詳細が特定できていればそこへ直行、できなければ一覧へ
+      // 出品詳細が特定できていればそこへ直行、できなければ一覧へ。
+      // 1秒でも早く購入画面に立てるよう、ブラウザ起動を最優先で行う
       const gotoUrl = result?.itemUrl ?? TARGET_URL;
+      openBrowser(gotoUrl);
+      speak(`${kw.replace(/[()（）]/g, " ")} のチケットが出ました`);
       console.log("");
       console.log(`\n🎫🎫🎫 [${ts()}] 購入可能な出品を検知: ${kw}`);
       seatLines.slice(0, 6).forEach((l) => console.log(`   ${l}`));
       console.log(`→ 今すぐ確認: ${gotoUrl}\n`);
       notify("みんなのチケット 出品検知", `${kw} に購入可能な出品: ${seatLines[0] ?? ""}`);
-      popupDialog(
-        "🎫 チケット出品検知",
-        `${kw} に購入可能な出品があります\n${seatLines.slice(0, 3).join("\n")}`,
-        gotoUrl
-      );
-      openBrowser(gotoUrl);
     } else {
       rowSeenWithoutSeats.push(kw);
     }
