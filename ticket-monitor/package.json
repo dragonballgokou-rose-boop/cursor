@@ -1,0 +1,17 @@
+{
+  "name": "ticket-monitor",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "みんなのチケット（楽天NFT）リセール出品ウォッチャー — 通知のみ、購入は手動",
+  "scripts": {
+    "start": "node monitor.mjs",
+    "start:browser": "node monitor-browser.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "playwright": "^1.45.0"
+  }
+}
