@@ -37,8 +37,9 @@ const WATCH_KEYWORDS = (process.env.WATCH_KEYWORDS ?? "8/23(日),8/23（日）")
   .map((s) => s.trim())
   .filter(Boolean);
 
-// この席種はどの日付でも通知する（空文字で無効化）
-const SPECIAL_SEAT_RAW = (process.env.SPECIAL_SEAT_KEYWORDS ?? "アリーナ")
+// この席種はどの日付でも通知する（デフォルト無効 = 8/23狙い撃ちモード。
+// アリーナ全日程監視に戻すなら SPECIAL_SEAT_KEYWORDS="アリーナ"）
+const SPECIAL_SEAT_RAW = (process.env.SPECIAL_SEAT_KEYWORDS ?? "")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
@@ -281,6 +282,8 @@ async function checkOnce() {
   for (const nDate of ordered) {
     const rowLabel = dateMap.get(nDate);
     const isWatch = watchSet.has(nDate);
+    // 特別席種ルールが無効なら、優先日以外の行は展開せずスキップ（高速化）
+    if (!isWatch && !SPECIAL_SEAT_PATTERN) continue;
     const result = await expandAndExtract(rowLabel);
     if (!result) continue;
 
