@@ -6,6 +6,10 @@
  * 出品リストが取れないことがある。この版は Playwright で実際にページを
  * レンダリングしてからキーワードを探す。
  *
+ * 検知ルール:
+ *   1. WATCH_KEYWORDS の日付（デフォルト 8/23(日)）: 除外席種以外の出品が出たら通知
+ *   2. SPECIAL_SEAT_KEYWORDS の席種（デフォルト アリーナ）: どの日でも出たら通知
+ *
  * ⚠️ 通知のみ。購入は必ず自分の手で行うこと（自動購入は規約違反）。
  *
  * 準備:
@@ -15,8 +19,6 @@
  *
  * 使い方:
  *   node monitor-browser.mjs
- *
- * 環境変数は monitor.mjs と同じ（WATCH_KEYWORDS / CHECK_INTERVAL / TARGET_URL / NO_OPEN）。
  */
 
 import { exec } from "node:child_process";
@@ -35,11 +37,39 @@ const WATCH_KEYWORDS = (process.env.WATCH_KEYWORDS ?? "8/23(日),8/23（日）")
   .map((s) => s.trim())
   .filter(Boolean);
 
+// この席種はどの日付でも通知する（空文字で無効化）
+const SPECIAL_SEAT_RAW = (process.env.SPECIAL_SEAT_KEYWORDS ?? "アリーナ")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+const SPECIAL_SEAT_PATTERN =
+  SPECIAL_SEAT_RAW.length > 0 ? new RegExp(SPECIAL_SEAT_RAW.join("|")) : null;
+
 // 最短1秒。前回チェック完了から次の開始までの待ち時間（重複実行はしない）
 const CHECK_INTERVAL_SEC = Math.max(1, Number(process.env.CHECK_INTERVAL ?? 1) || 1);
 const NO_OPEN = process.env.NO_OPEN === "1";
 
+// 出品の中身（価格・購入可否）を示す文言
+const SEAT_PATTERN = /円|購入|カートに入れる|残り|枚|席/;
+
+// 通知しない席種（EXCLUDE_KEYWORDS で変更可、カンマ区切り）
+const EXCLUDE_PATTERN = new RegExp(
+  (process.env.EXCLUDE_KEYWORDS ?? "バリアフリー,親子,女性")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .join("|")
+);
+
+// ログイン・認証系のURL（出品ページとして開いてはいけない）
+const AUTH_URL_PATTERN = /login|signin|sign-in|authorize|auth|id\.rakuten|grp\d+\.id/i;
+
+// ページ上の公演日ヘッダー「8/20(木)」「8/23（日）」を拾う
+const DATE_ROW_RE = /\d{1,2}\/\d{1,2}\s*[\(（][月火水木金土日][\)）]/g;
+
 const ts = () => new Date().toLocaleTimeString("ja-JP", { hour12: false });
+const norm = (s) => s.replace(/（/g, "(").replace(/）/g, ")").replace(/\s/g, "");
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 function openBrowser(url) {
   if (NO_OPEN) return;
@@ -69,13 +99,11 @@ function notify(title, message) {
   }
 }
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ locale: "ja-JP" });
 const page = await context.newPage();
 
-// 画像・動画・フォント・広告系はブロックして読み込みを高速化
+// 画像・動画・フォントはブロックして読み込みを高速化
 await page.route("**/*", (route) => {
   const type = route.request().resourceType();
   if (["image", "media", "font"].includes(type)) return route.abort();
@@ -100,28 +128,12 @@ async function getPageText() {
   return page.evaluate(() => document.body.innerText);
 }
 
-// 出品の中身（価格・購入可否）を示す文言
-const SEAT_PATTERN = /円|購入|カートに入れる|残り|枚|席/;
-
-// 通知しない席種（EXCLUDE_KEYWORDS で変更可、カンマ区切り）
-const EXCLUDE_PATTERN = new RegExp(
-  (process.env.EXCLUDE_KEYWORDS ?? "バリアフリー,親子,女性")
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .join("|")
-);
-
-// ログイン・認証系のURL（出品ページとして開いてはいけない）
-const AUTH_URL_PATTERN = /login|signin|sign-in|authorize|auth|id\.rakuten|grp\d+\.id/i;
-
 /**
- * 対象日の行をクリックして展開し、中身のテキストを返す。
- * クリックで詳細ページへ遷移してしまった場合は一覧へ戻る。
+ * 公演日の行をクリックして展開し、その公演の中身（席種・価格の行）を返す。
  */
-async function expandAndExtract(kw) {
+async function expandAndExtract(rowLabel) {
   try {
-    const row = page.getByText(kw).first();
+    const row = page.getByText(rowLabel).first();
     if ((await row.count()) === 0) return null;
     await row.click({ timeout: 3_000 });
     await page.waitForTimeout(800); // 展開アニメーション待ち
@@ -131,17 +143,21 @@ async function expandAndExtract(kw) {
 
   const text = await page.evaluate(() => document.body.innerText);
   const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
-  const idx = lines.findIndex((l) => l.includes(kw));
+  const idx = lines.findIndex((l) => l.includes(rowLabel));
   if (idx === -1) return null;
 
   // 行の直後から、次の公演日ヘッダーが来るまでを「この公演の中身」とみなす
   const section = [];
   for (let i = idx + 1; i < lines.length && section.length < 20; i++) {
-    if (/^〔?\d{1,2}\/\d{1,2}\s*[\(（]/.test(lines[i]) && !lines[i].includes(kw)) break;
+    if (DATE_ROW_RE.test(lines[i]) && !lines[i].includes(rowLabel)) {
+      DATE_ROW_RE.lastIndex = 0;
+      break;
+    }
+    DATE_ROW_RE.lastIndex = 0;
     section.push(lines[i]);
   }
 
-  // 席種の判定。除外席種（バリアフリー・親子・女性など）は前後の行も見て弾く
+  // 席種の判定。除外席種は前後の行も見て弾く
   //（席種名と価格が別の行に分かれていることがあるため）
   const excludedLines = [];
   const seatLines = section.filter((l, i) => {
@@ -153,55 +169,78 @@ async function expandAndExtract(kw) {
     }
     return true;
   });
-  let itemUrl = null;
 
-  if (seatLines.length > 0) {
-    // 出品要素そのものをクリックし、遷移した先のURLを「席を押したあとの画面」として採用。
-    // 監視用ブラウザは未ログインなのでログインページへ飛ばされることがある。
-    // その場合のURLは出品ページではないため採用しない（Safariで開くとログイン画面になってしまう）
-    try {
-      const el = page.getByText(seatLines[0].slice(0, 20)).first();
-      if ((await el.count()) > 0) {
-        const before = page.url();
-        await el.click({ timeout: 2_000 });
-        await page.waitForTimeout(1_200);
-        const after = page.url();
-        if (
-          after !== before &&
-          after.includes("nft.rakuten.co.jp") &&
-          !AUTH_URL_PATTERN.test(after)
-        ) {
-          itemUrl = after;
-        }
+  // どの日でも通知する特別席種（アリーナ等）
+  const specialLines = SPECIAL_SEAT_PATTERN
+    ? section.filter((l, i) => {
+        if (!SEAT_PATTERN.test(l)) return false;
+        const ctx = [section[i - 1], l, section[i + 1]].filter(Boolean).join(" ");
+        return SPECIAL_SEAT_PATTERN.test(ctx) && !EXCLUDE_PATTERN.test(ctx);
+      })
+    : [];
+
+  return { section, seatLines, excludedLines, specialLines };
+}
+
+/**
+ * 検知した出品をクリックし、遷移先URLを「席を押したあとの画面」として返す。
+ * 監視用ブラウザは未ログインなのでログインページへ飛ばされることがあり、
+ * そのURLは採用しない（Safariで開くとログイン画面になってしまうため）。
+ * 終わったら一覧ページへ戻す。
+ */
+async function resolveItemUrl(snippet) {
+  let url = null;
+  try {
+    const el = page.getByText(snippet.slice(0, 20)).first();
+    if ((await el.count()) > 0) {
+      const before = page.url();
+      await el.click({ timeout: 2_000 });
+      await page.waitForTimeout(1_200);
+      const after = page.url();
+      if (
+        after !== before &&
+        after.includes("nft.rakuten.co.jp") &&
+        !AUTH_URL_PATTERN.test(after)
+      ) {
+        url = after;
       }
-    } catch {
-      // クリックで取れなければフォールバックへ
     }
-
-    if (!itemUrl) {
-      // フォールバック: nft.rakuten.co.jp 内の出品詳細らしいリンクのみ対象
-      //（以前は楽天グループの無関係なリンクを拾っていたため厳しく制限）
-      itemUrl = await page.evaluate(() => {
-        const anchors = Array.from(document.querySelectorAll("a[href]"));
-        const a = anchors.find(
-          (a) =>
-            a.href.includes("nft.rakuten.co.jp") &&
-            /item|detail/.test(a.href) &&
-            !/login|signin|sign-in|authorize|auth|id\.rakuten/i.test(a.href) &&
-            !a.href.includes("marketplace/?")
-        );
-        return a ? a.href : null;
-      });
-    }
+  } catch {
+    // クリックで取れなければフォールバックへ
   }
 
-  // 詳細ページへ遷移していたら一覧に戻しておく
+  if (!url) {
+    // フォールバック: nft.rakuten.co.jp 内の出品詳細らしいリンクのみ対象
+    url = await page.evaluate(() => {
+      const anchors = Array.from(document.querySelectorAll("a[href]"));
+      const a = anchors.find(
+        (a) =>
+          a.href.includes("nft.rakuten.co.jp") &&
+          /item|detail/.test(a.href) &&
+          !/login|signin|sign-in|authorize|auth|id\.rakuten/i.test(a.href) &&
+          !a.href.includes("marketplace/?")
+      );
+      return a ? a.href : null;
+    });
+  }
+
+  // 一覧ページへ戻す
   if (!page.url().startsWith(TARGET_URL.split("?")[0])) {
     await page
       .goto(TARGET_URL, { waitUntil: "domcontentloaded", timeout: 30_000 })
       .catch(() => {});
   }
-  return { section, seatLines, excludedLines, itemUrl };
+  return url;
+}
+
+function fireAlert(label, alertLines, gotoUrl, speech) {
+  openBrowser(gotoUrl);
+  speak(speech);
+  console.log("");
+  console.log(`\n🎫🎫🎫 [${ts()}] ${label}`);
+  alertLines.slice(0, 6).forEach((l) => console.log(`   ${l}`));
+  console.log(`→ 今すぐ確認: ${gotoUrl}\n`);
+  notify("みんなのチケット 出品検知", `${label}: ${alertLines[0] ?? ""}`);
 }
 
 async function checkOnce() {
@@ -214,55 +253,84 @@ async function checkOnce() {
     return;
   }
 
-  const hits = WATCH_KEYWORDS.filter((kw) => text.includes(kw));
-  let rowSeenWithoutSeats = [];
+  // ページ上の公演日行をすべて拾う（正規化した日付 → ページ上の表記）
+  const dateMap = new Map();
+  for (const d of text.match(DATE_ROW_RE) ?? []) {
+    const n = norm(d);
+    if (!dateMap.has(n)) dateMap.set(n, d);
+  }
 
-  for (const kw of hits) {
-    if (alreadyAlerted.has(kw)) continue;
+  const watchSet = new Set(WATCH_KEYWORDS.map(norm));
+  // 優先日（8/23）を先に処理して、アリーナ検索より先に通知できるようにする
+  const ordered = [...dateMap.keys()].sort(
+    (a, b) => (watchSet.has(b) ? 1 : 0) - (watchSet.has(a) ? 1 : 0)
+  );
 
-    const result = await expandAndExtract(kw);
-    const seatLines = result?.seatLines ?? [];
+  const foundKeys = new Set();
+  const statusNotes = [];
 
-    if (seatLines.length > 0) {
-      // 実際に買える出品がある場合のみ通知する
-      alreadyAlerted.add(kw);
-      // 出品詳細が特定できていればそこへ直行、できなければ一覧へ。
-      // 1秒でも早く購入画面に立てるよう、ブラウザ起動を最優先で行う
-      const gotoUrl = result?.itemUrl ?? TARGET_URL;
-      openBrowser(gotoUrl);
-      speak(`${kw.replace(/[()（）]/g, " ")} のチケットが出ました`);
-      console.log("");
-      console.log(`\n🎫🎫🎫 [${ts()}] 購入可能な出品を検知: ${kw}`);
-      seatLines.slice(0, 6).forEach((l) => console.log(`   ${l}`));
-      console.log(`→ 今すぐ確認: ${gotoUrl}\n`);
-      notify("みんなのチケット 出品検知", `${kw} に購入可能な出品: ${seatLines[0] ?? ""}`);
-    } else if ((result?.excludedLines?.length ?? 0) > 0) {
-      rowSeenWithoutSeats.push(`${kw}（除外席種のみ: ${result.excludedLines[0]}）`);
-    } else {
-      rowSeenWithoutSeats.push(kw);
+  for (const nDate of ordered) {
+    const rowLabel = dateMap.get(nDate);
+    const isWatch = watchSet.has(nDate);
+    const result = await expandAndExtract(rowLabel);
+    if (!result) continue;
+
+    let key = null;
+    let label = null;
+    let alertLines = null;
+    let speech = null;
+
+    if (isWatch && result.seatLines.length > 0) {
+      key = `date:${nDate}`;
+      label = `購入可能な出品を検知: ${nDate}`;
+      alertLines = result.seatLines;
+      speech = `${nDate.replace(/[()（）]/g, " ")} のチケットが出ました`;
+    } else if (result.specialLines.length > 0) {
+      key = `special:${nDate}`;
+      label = `アリーナ席を検知: ${nDate}`;
+      alertLines = result.specialLines;
+      speech = `${nDate.replace(/[()（）]/g, " ")} にアリーナ席が出ました`;
     }
+
+    if (key) {
+      foundKeys.add(key);
+      if (!alreadyAlerted.has(key)) {
+        alreadyAlerted.add(key);
+        const gotoUrl = (await resolveItemUrl(alertLines[0])) ?? TARGET_URL;
+        fireAlert(label, alertLines, gotoUrl, speech);
+      }
+    } else if (isWatch) {
+      statusNotes.push(
+        result.excludedLines.length > 0
+          ? `${nDate}: 除外席種のみ（${result.excludedLines[0]}）`
+          : `${nDate}: 出品なし`
+      );
+    }
+  }
+
+  // 消えた出品は検知済みリストから外し、次に出たとき再通知できるようにする
+  for (const k of [...alreadyAlerted]) {
+    if (!foundKeys.has(k)) alreadyAlerted.delete(k);
   }
 
   if (checkCount % 10 === 1) {
     if (alreadyAlerted.size > 0) {
       console.log(`[${ts()}] 検知済み: ${[...alreadyAlerted].join(", ")}（引き続き掲載中）`);
-    } else if (rowSeenWithoutSeats.length > 0) {
-      console.log(
-        `[${ts()}] ${rowSeenWithoutSeats.join(", ")} の行はあるが購入可能な出品なし（監視継続）`
-      );
+    } else if (statusNotes.length > 0) {
+      console.log(`[${ts()}] ${statusNotes.join(" / ")}・アリーナなし（監視継続・${checkCount}回）`);
     } else {
-      console.log(`[${ts()}] 対象日の出品なし（監視継続・${checkCount}回チェック済み）`);
+      console.log(`[${ts()}] 対象の出品なし（監視継続・${checkCount}回チェック済み）`);
     }
-  }
-
-  for (const kw of [...alreadyAlerted]) {
-    if (!text.includes(kw)) alreadyAlerted.delete(kw);
   }
 }
 
 console.log("=== みんなのチケット リセール出品ウォッチャー（ブラウザ版） ===");
 console.log(`監視URL   : ${TARGET_URL}`);
-console.log(`キーワード: ${WATCH_KEYWORDS.join(", ")}`);
+console.log(`優先日    : ${WATCH_KEYWORDS.join(", ")}（全席種）`);
+console.log(
+  `特別席種  : ${SPECIAL_SEAT_RAW.length > 0 ? `${SPECIAL_SEAT_RAW.join(", ")}（全日程）` : "なし"}`
+);
+console.log(`除外席種  : ${process.env.EXCLUDE_KEYWORDS ?? "バリアフリー,親子,女性"}`);
 console.log(`間隔      : 前回完了から${CHECK_INTERVAL_SEC}秒後に次をチェック`);
 console.log("Ctrl+C で終了\n");
 
