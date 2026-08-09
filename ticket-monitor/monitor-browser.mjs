@@ -102,6 +102,18 @@ async function getPageText() {
 // 出品の中身（価格・購入可否）を示す文言
 const SEAT_PATTERN = /円|購入|カートに入れる|残り|枚|席/;
 
+// 通知しない席種（EXCLUDE_KEYWORDS で変更可、カンマ区切り）
+const EXCLUDE_PATTERN = new RegExp(
+  (process.env.EXCLUDE_KEYWORDS ?? "バリアフリー,親子,女性")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .join("|")
+);
+
+// ログイン・認証系のURL（出品ページとして開いてはいけない）
+const AUTH_URL_PATTERN = /login|signin|sign-in|authorize|auth|id\.rakuten|grp\d+\.id/i;
+
 /**
  * 対象日の行をクリックして展開し、中身のテキストを返す。
  * クリックで詳細ページへ遷移してしまった場合は一覧へ戻る。
@@ -128,11 +140,24 @@ async function expandAndExtract(kw) {
     section.push(lines[i]);
   }
 
-  const seatLines = section.filter((l) => SEAT_PATTERN.test(l));
+  // 席種の判定。除外席種（バリアフリー・親子・女性など）は前後の行も見て弾く
+  //（席種名と価格が別の行に分かれていることがあるため）
+  const excludedLines = [];
+  const seatLines = section.filter((l, i) => {
+    if (!SEAT_PATTERN.test(l)) return false;
+    const ctx = [section[i - 1], l, section[i + 1]].filter(Boolean).join(" ");
+    if (EXCLUDE_PATTERN.test(ctx)) {
+      excludedLines.push(l);
+      return false;
+    }
+    return true;
+  });
   let itemUrl = null;
 
   if (seatLines.length > 0) {
-    // 出品要素そのものをクリックし、遷移した先のURLを「席を押したあとの画面」として採用
+    // 出品要素そのものをクリックし、遷移した先のURLを「席を押したあとの画面」として採用。
+    // 監視用ブラウザは未ログインなのでログインページへ飛ばされることがある。
+    // その場合のURLは出品ページではないため採用しない（Safariで開くとログイン画面になってしまう）
     try {
       const el = page.getByText(seatLines[0].slice(0, 20)).first();
       if ((await el.count()) > 0) {
@@ -140,7 +165,11 @@ async function expandAndExtract(kw) {
         await el.click({ timeout: 2_000 });
         await page.waitForTimeout(1_200);
         const after = page.url();
-        if (after !== before && after.includes("nft.rakuten.co.jp")) {
+        if (
+          after !== before &&
+          after.includes("nft.rakuten.co.jp") &&
+          !AUTH_URL_PATTERN.test(after)
+        ) {
           itemUrl = after;
         }
       }
@@ -157,6 +186,7 @@ async function expandAndExtract(kw) {
           (a) =>
             a.href.includes("nft.rakuten.co.jp") &&
             /item|detail/.test(a.href) &&
+            !/login|signin|sign-in|authorize|auth|id\.rakuten/i.test(a.href) &&
             !a.href.includes("marketplace/?")
         );
         return a ? a.href : null;
@@ -170,7 +200,7 @@ async function expandAndExtract(kw) {
       .goto(TARGET_URL, { waitUntil: "domcontentloaded", timeout: 30_000 })
       .catch(() => {});
   }
-  return { section, seatLines, itemUrl };
+  return { section, seatLines, excludedLines, itemUrl };
 }
 
 async function checkOnce() {
@@ -205,6 +235,8 @@ async function checkOnce() {
       seatLines.slice(0, 6).forEach((l) => console.log(`   ${l}`));
       console.log(`→ 今すぐ確認: ${gotoUrl}\n`);
       notify("みんなのチケット 出品検知", `${kw} に購入可能な出品: ${seatLines[0] ?? ""}`);
+    } else if ((result?.excludedLines?.length ?? 0) > 0) {
+      rowSeenWithoutSeats.push(`${kw}（除外席種のみ: ${result.excludedLines[0]}）`);
     } else {
       rowSeenWithoutSeats.push(kw);
     }
