@@ -93,6 +93,44 @@ async function getPageText() {
   return page.evaluate(() => document.body.innerText);
 }
 
+// 出品の中身（価格・購入可否）を示す文言
+const SEAT_PATTERN = /円|購入|カートに入れる|残り|枚|席/;
+
+/**
+ * 対象日の行をクリックして展開し、中身のテキストを返す。
+ * クリックで詳細ページへ遷移してしまった場合は一覧へ戻る。
+ */
+async function expandAndExtract(kw) {
+  try {
+    const row = page.getByText(kw).first();
+    if ((await row.count()) === 0) return null;
+    await row.click({ timeout: 3_000 });
+    await page.waitForTimeout(800); // 展開アニメーション待ち
+  } catch {
+    // クリックできなくても現状のテキストで判定を試みる
+  }
+
+  const text = await page.evaluate(() => document.body.innerText);
+  const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+  const idx = lines.findIndex((l) => l.includes(kw));
+  if (idx === -1) return null;
+
+  // 行の直後から、次の公演日ヘッダーが来るまでを「この公演の中身」とみなす
+  const section = [];
+  for (let i = idx + 1; i < lines.length && section.length < 20; i++) {
+    if (/^〔?\d{1,2}\/\d{1,2}\s*[\(（]/.test(lines[i]) && !lines[i].includes(kw)) break;
+    section.push(lines[i]);
+  }
+
+  // 詳細ページへ遷移していたら一覧に戻しておく
+  if (!page.url().startsWith(TARGET_URL.split("?")[0])) {
+    await page
+      .goto(TARGET_URL, { waitUntil: "domcontentloaded", timeout: 30_000 })
+      .catch(() => {});
+  }
+  return section;
+}
+
 async function checkOnce() {
   checkCount++;
   let text;
@@ -104,31 +142,38 @@ async function checkOnce() {
   }
 
   const hits = WATCH_KEYWORDS.filter((kw) => text.includes(kw));
-  const newHits = hits.filter((kw) => !alreadyAlerted.has(kw));
+  let rowSeenWithoutSeats = [];
 
-  if (newHits.length > 0) {
-    newHits.forEach((kw) => alreadyAlerted.add(kw));
-    const msg = `出品検知: ${newHits.join(", ")}`;
-    console.log("");
-    console.log(`\n🎫🎫🎫 [${ts()}] ${msg}`);
-    // 誤検知かどうか確認できるよう、ヒットした行を表示する
-    const lines = text.split("\n");
-    for (const kw of newHits) {
-      lines
-        .filter((l) => l.includes(kw))
-        .slice(0, 3)
-        .forEach((l) => console.log(`   ヒット行: ${l.trim()}`));
+  for (const kw of hits) {
+    if (alreadyAlerted.has(kw)) continue;
+
+    const section = await expandAndExtract(kw);
+    const seatLines = (section ?? []).filter((l) => SEAT_PATTERN.test(l));
+
+    if (seatLines.length > 0) {
+      // 実際に買える出品がある場合のみ通知する
+      alreadyAlerted.add(kw);
+      console.log("");
+      console.log(`\n🎫🎫🎫 [${ts()}] 購入可能な出品を検知: ${kw}`);
+      seatLines.slice(0, 6).forEach((l) => console.log(`   ${l}`));
+      console.log(`→ 今すぐ確認: ${TARGET_URL}\n`);
+      notify("みんなのチケット 出品検知", `${kw} に購入可能な出品: ${seatLines[0] ?? ""}`);
+      openBrowser(TARGET_URL);
+    } else {
+      rowSeenWithoutSeats.push(kw);
     }
-    console.log(`→ 今すぐ確認: ${TARGET_URL}\n`);
-    notify("みんなのチケット 出品検知", msg);
-    openBrowser(TARGET_URL);
-  } else if (hits.length > 0) {
-    if (checkCount % 10 === 1) {
-      console.log(`[${ts()}] 検知済みキーワードは引き続き掲載中 (${hits.join(", ")})`);
+  }
+
+  if (checkCount % 10 === 1) {
+    if (alreadyAlerted.size > 0) {
+      console.log(`[${ts()}] 検知済み: ${[...alreadyAlerted].join(", ")}（引き続き掲載中）`);
+    } else if (rowSeenWithoutSeats.length > 0) {
+      console.log(
+        `[${ts()}] ${rowSeenWithoutSeats.join(", ")} の行はあるが購入可能な出品なし（監視継続）`
+      );
+    } else {
+      console.log(`[${ts()}] 対象日の出品なし（監視継続・${checkCount}回チェック済み）`);
     }
-  } else if (checkCount % 10 === 1) {
-    // 短い間隔でもログが溢れないよう10回に1回だけ状況を出す
-    console.log(`[${ts()}] 対象日の出品なし（監視継続・${checkCount}回チェック済み）`);
   }
 
   for (const kw of [...alreadyAlerted]) {
