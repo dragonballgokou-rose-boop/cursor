@@ -157,27 +157,36 @@ async function expandAndExtract(rowLabel) {
     section.push(lines[i]);
   }
 
-  // 席種の判定。除外席種は前後の行も見て弾く
-  //（席種名と価格が別の行に分かれていることがあるため）
+  // 除外席種（バリアフリー・親子・女性など）の判定。
+  // 席種名と価格・残数が数行離れて表示されることがあるため、
+  // 除外語が出た行の前2行〜後4行を「除外ゾーン」としてブロックごと弾く
+  const excludeIdx = [];
+  section.forEach((l, i) => {
+    if (EXCLUDE_PATTERN.test(l)) excludeIdx.push(i);
+  });
+  const inExcludeZone = (i) => excludeIdx.some((e) => i >= e - 2 && i <= e + 4);
+
   const excludedLines = [];
   const seatLines = section.filter((l, i) => {
     if (!SEAT_PATTERN.test(l)) return false;
-    const ctx = [section[i - 1], l, section[i + 1]].filter(Boolean).join(" ");
-    if (EXCLUDE_PATTERN.test(ctx)) {
+    if (inExcludeZone(i)) {
       excludedLines.push(l);
       return false;
     }
     return true;
   });
 
-  // どの日でも通知する特別席種（アリーナ等）
-  const specialLines = SPECIAL_SEAT_PATTERN
-    ? section.filter((l, i) => {
-        if (!SEAT_PATTERN.test(l)) return false;
-        const ctx = [section[i - 1], l, section[i + 1]].filter(Boolean).join(" ");
-        return SPECIAL_SEAT_PATTERN.test(ctx) && !EXCLUDE_PATTERN.test(ctx);
-      })
-    : [];
+  // どの日でも通知する特別席種（アリーナ等）。同じく除外ゾーンは弾く
+  const specialIdx = [];
+  if (SPECIAL_SEAT_PATTERN) {
+    section.forEach((l, i) => {
+      if (SPECIAL_SEAT_PATTERN.test(l)) specialIdx.push(i);
+    });
+  }
+  const inSpecialZone = (i) => specialIdx.some((e) => i >= e - 2 && i <= e + 4);
+  const specialLines = section.filter(
+    (l, i) => SEAT_PATTERN.test(l) && inSpecialZone(i) && !inExcludeZone(i)
+  );
 
   return { section, seatLines, excludedLines, specialLines };
 }
