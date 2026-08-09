@@ -40,7 +40,7 @@ node monitor-browser.mjs
 
 | 変数 | デフォルト | 説明 |
 |---|---|---|
-| `WATCH_KEYWORDS` | `8/22,8/23,08/22,08/23` | 検知したい文字列（カンマ区切り） |
+| `WATCH_KEYWORDS` | `8/22(土),8/23(日)`（全角括弧版も含む） | 検知したい文字列（カンマ区切り）。曜日付きにして日付表記への誤検知を防止 |
 | `CHECK_INTERVAL` | `3` | 前回チェック完了から次の開始までの秒数。最短3秒 |
 | `TARGET_URL` | 乃木坂46フィルタ済みページ | 監視対象URL |
 | `NO_OPEN` | - | `1` で検知時にブラウザを開かない |
@@ -48,7 +48,7 @@ node monitor-browser.mjs
 例: 8/23 だけを10秒おきに監視
 
 ```bash
-WATCH_KEYWORDS="8/23,08/23" CHECK_INTERVAL=10 node monitor-browser.mjs
+WATCH_KEYWORDS="8/23(日),8/23（日）" CHECK_INTERVAL=10 node monitor-browser.mjs
 ```
 
 > ⚠️ 間隔を短くしすぎると楽天側にアクセス制限される可能性があります。

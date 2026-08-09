@@ -27,7 +27,9 @@ const TARGET_URL =
   process.env.TARGET_URL ??
   "https://nft.rakuten.co.jp/marketplace/?type=ticket&sort=last_updated_date&limit=12&ticketlimit=6&provider=nogizaka";
 
-const WATCH_KEYWORDS = (process.env.WATCH_KEYWORDS ?? "8/22,8/23,08/22,08/23")
+// 公演行は「〔8/20(木)｜東京〕 乃木坂46 …」形式なので、曜日付きで判定して
+// 「販売終了日時: 2026/08/22」のような日付表記への誤検知を防ぐ
+const WATCH_KEYWORDS = (process.env.WATCH_KEYWORDS ?? "8/22(土),8/23(日),8/22（土）,8/23（日）")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
@@ -109,6 +111,14 @@ async function checkOnce() {
     const msg = `出品検知: ${newHits.join(", ")}`;
     console.log("");
     console.log(`\n🎫🎫🎫 [${ts()}] ${msg}`);
+    // 誤検知かどうか確認できるよう、ヒットした行を表示する
+    const lines = text.split("\n");
+    for (const kw of newHits) {
+      lines
+        .filter((l) => l.includes(kw))
+        .slice(0, 3)
+        .forEach((l) => console.log(`   ヒット行: ${l.trim()}`));
+    }
     console.log(`→ 今すぐ確認: ${TARGET_URL}\n`);
     notify("みんなのチケット 出品検知", msg);
     openBrowser(TARGET_URL);
