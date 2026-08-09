@@ -32,8 +32,8 @@ const WATCH_KEYWORDS = (process.env.WATCH_KEYWORDS ?? "8/22,8/23,08/22,08/23")
   .filter(Boolean);
 
 const CHECK_INTERVAL_SEC = Math.max(
-  60, // サーバーに負荷をかけないよう最短60秒
-  Number(process.env.CHECK_INTERVAL ?? 90) || 90
+  3, // 最短3秒
+  Number(process.env.CHECK_INTERVAL ?? 3) || 3
 );
 
 const NO_OPEN = process.env.NO_OPEN === "1";

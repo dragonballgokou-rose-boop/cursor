@@ -32,7 +32,8 @@ const WATCH_KEYWORDS = (process.env.WATCH_KEYWORDS ?? "8/22,8/23,08/22,08/23")
   .map((s) => s.trim())
   .filter(Boolean);
 
-const CHECK_INTERVAL_SEC = Math.max(60, Number(process.env.CHECK_INTERVAL ?? 90) || 90);
+// 最短3秒。前回チェック完了から次の開始までの待ち時間（重複実行はしない）
+const CHECK_INTERVAL_SEC = Math.max(3, Number(process.env.CHECK_INTERVAL ?? 3) || 3);
 const NO_OPEN = process.env.NO_OPEN === "1";
 
 const ts = () => new Date().toLocaleTimeString("ja-JP", { hour12: false });
@@ -59,19 +60,44 @@ function notify(title, message) {
   }
 }
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ locale: "ja-JP" });
 const page = await context.newPage();
 
+// 画像・動画・フォント・広告系はブロックして読み込みを高速化
+await page.route("**/*", (route) => {
+  const type = route.request().resourceType();
+  if (["image", "media", "font"].includes(type)) return route.abort();
+  return route.continue();
+});
+
 let alreadyAlerted = new Set();
+let checkCount = 0;
+
+async function getPageText() {
+  // networkidle は楽天のページでは永遠に来ない（計測通信が続く）ので使わない。
+  // DOM構築後、出品リストの描画を最大10秒待つ。
+  await page.goto(TARGET_URL, { waitUntil: "domcontentloaded", timeout: 30_000 });
+  try {
+    await page.waitForFunction(
+      () => /販売中|アイテム|乃木坂/.test(document.body.innerText),
+      { timeout: 10_000 }
+    );
+  } catch {
+    // リストが読めなくても本文で判定は試みる
+  }
+  return page.evaluate(() => document.body.innerText);
+}
 
 async function checkOnce() {
+  checkCount++;
   let text;
   try {
-    await page.goto(TARGET_URL, { waitUntil: "networkidle", timeout: 45_000 });
-    text = await page.evaluate(() => document.body.innerText);
+    text = await getPageText();
   } catch (err) {
-    console.log(`[${ts()}] 取得失敗: ${err.message}（次回リトライ）`);
+    console.log(`[${ts()}] 取得失敗: ${err.message.split("\n")[0]}（次回リトライ）`);
     return;
   }
 
@@ -87,9 +113,12 @@ async function checkOnce() {
     notify("みんなのチケット 出品検知", msg);
     openBrowser(TARGET_URL);
   } else if (hits.length > 0) {
-    console.log(`[${ts()}] 検知済みキーワードは引き続き掲載中 (${hits.join(", ")})`);
-  } else {
-    console.log(`[${ts()}] 対象日の出品なし（監視継続）`);
+    if (checkCount % 10 === 1) {
+      console.log(`[${ts()}] 検知済みキーワードは引き続き掲載中 (${hits.join(", ")})`);
+    }
+  } else if (checkCount % 10 === 1) {
+    // 短い間隔でもログが溢れないよう10回に1回だけ状況を出す
+    console.log(`[${ts()}] 対象日の出品なし（監視継続・${checkCount}回チェック済み）`);
   }
 
   for (const kw of [...alreadyAlerted]) {
@@ -100,8 +129,12 @@ async function checkOnce() {
 console.log("=== みんなのチケット リセール出品ウォッチャー（ブラウザ版） ===");
 console.log(`監視URL   : ${TARGET_URL}`);
 console.log(`キーワード: ${WATCH_KEYWORDS.join(", ")}`);
-console.log(`間隔      : ${CHECK_INTERVAL_SEC}秒`);
+console.log(`間隔      : 前回完了から${CHECK_INTERVAL_SEC}秒後に次をチェック`);
 console.log("Ctrl+C で終了\n");
 
-await checkOnce();
-setInterval(checkOnce, CHECK_INTERVAL_SEC * 1000);
+// setInterval だとチェックが重なって多重アクセスになるため、
+// 「完了 → 待つ → 次」の直列ループにする
+while (true) {
+  await checkOnce();
+  await sleep(CHECK_INTERVAL_SEC * 1000);
+}
