@@ -51,6 +51,18 @@ function openBrowser(url) {
   exec(cmd, () => {});
 }
 
+/**
+ * 最前面にモーダルダイアログを出す（macOS）。
+ * 「開く」を押すと出品ページがブラウザで開く。120秒で自動で閉じる。
+ */
+function popupDialog(title, message, url) {
+  if (process.platform !== "darwin") return;
+  exec(
+    `osascript -e 'set r to display dialog ${JSON.stringify(message)} with title ${JSON.stringify(title)} buttons {"閉じる","開く"} default button "開く" with icon caution giving up after 120' -e 'if button returned of r is "開く" then open location ${JSON.stringify(url)}'`,
+    () => {}
+  );
+}
+
 function notify(title, message) {
   if (process.platform === "darwin") {
     exec(
@@ -122,13 +134,24 @@ async function expandAndExtract(kw) {
     section.push(lines[i]);
   }
 
+  // 出品詳細ページ（席を押したあとの画面）のリンクを探す
+  const itemUrl = await page.evaluate(() => {
+    const anchors = Array.from(document.querySelectorAll("a[href]"));
+    const byPrice = anchors.find((a) => /円/.test(a.innerText || ""));
+    if (byPrice) return byPrice.href;
+    const byPath = anchors.find((a) =>
+      /item|detail|ticket\//.test(a.getAttribute("href") || "")
+    );
+    return byPath ? byPath.href : null;
+  });
+
   // 詳細ページへ遷移していたら一覧に戻しておく
   if (!page.url().startsWith(TARGET_URL.split("?")[0])) {
     await page
       .goto(TARGET_URL, { waitUntil: "domcontentloaded", timeout: 30_000 })
       .catch(() => {});
   }
-  return section;
+  return { section, itemUrl };
 }
 
 async function checkOnce() {
@@ -147,18 +170,25 @@ async function checkOnce() {
   for (const kw of hits) {
     if (alreadyAlerted.has(kw)) continue;
 
-    const section = await expandAndExtract(kw);
-    const seatLines = (section ?? []).filter((l) => SEAT_PATTERN.test(l));
+    const result = await expandAndExtract(kw);
+    const seatLines = (result?.section ?? []).filter((l) => SEAT_PATTERN.test(l));
 
     if (seatLines.length > 0) {
       // 実際に買える出品がある場合のみ通知する
       alreadyAlerted.add(kw);
+      // 出品詳細が特定できていればそこへ直行、できなければ一覧へ
+      const gotoUrl = result?.itemUrl ?? TARGET_URL;
       console.log("");
       console.log(`\n🎫🎫🎫 [${ts()}] 購入可能な出品を検知: ${kw}`);
       seatLines.slice(0, 6).forEach((l) => console.log(`   ${l}`));
-      console.log(`→ 今すぐ確認: ${TARGET_URL}\n`);
+      console.log(`→ 今すぐ確認: ${gotoUrl}\n`);
       notify("みんなのチケット 出品検知", `${kw} に購入可能な出品: ${seatLines[0] ?? ""}`);
-      openBrowser(TARGET_URL);
+      popupDialog(
+        "🎫 チケット出品検知",
+        `${kw} に購入可能な出品があります\n${seatLines.slice(0, 3).join("\n")}`,
+        gotoUrl
+      );
+      openBrowser(gotoUrl);
     } else {
       rowSeenWithoutSeats.push(kw);
     }
