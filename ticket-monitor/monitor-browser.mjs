@@ -34,8 +34,8 @@ const WATCH_KEYWORDS = (process.env.WATCH_KEYWORDS ?? "8/22(土),8/23(日),8/22�
   .map((s) => s.trim())
   .filter(Boolean);
 
-// 最短3秒。前回チェック完了から次の開始までの待ち時間（重複実行はしない）
-const CHECK_INTERVAL_SEC = Math.max(3, Number(process.env.CHECK_INTERVAL ?? 3) || 3);
+// 最短1秒。前回チェック完了から次の開始までの待ち時間（重複実行はしない）
+const CHECK_INTERVAL_SEC = Math.max(1, Number(process.env.CHECK_INTERVAL ?? 1) || 1);
 const NO_OPEN = process.env.NO_OPEN === "1";
 
 const ts = () => new Date().toLocaleTimeString("ja-JP", { hour12: false });

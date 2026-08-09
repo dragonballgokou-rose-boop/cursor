@@ -33,8 +33,8 @@ const WATCH_KEYWORDS = (process.env.WATCH_KEYWORDS ?? "8/22(土),8/23(日),8/22�
   .filter(Boolean);
 
 const CHECK_INTERVAL_SEC = Math.max(
-  3, // 最短3秒
-  Number(process.env.CHECK_INTERVAL ?? 3) || 3
+  1, // 最短1秒
+  Number(process.env.CHECK_INTERVAL ?? 1) || 1
 );
 
 const NO_OPEN = process.env.NO_OPEN === "1";
