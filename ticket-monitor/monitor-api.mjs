@@ -31,10 +31,11 @@ const TICKETS_API_BASE =
 // 監視対象: "開演時刻=モード" のカンマ区切り。モードは all（全席種）| arena（アリーナのみ）
 // コマンド引数でも指定可（環境変数の書き方がOSで違うため）:
 //   node monitor-api.mjs "2026-08-22T18:00:00=all"
+// 全席確保済みのため、両日ともアリーナ指定のみ（アップグレード狙い）
 const TARGETS = (
   process.argv[2] ??
   process.env.TARGETS ??
-  "2026-08-22T18:00:00=all,2026-08-23T18:00:00=arena"
+  "2026-08-22T18:00:00=arena,2026-08-23T18:00:00=arena"
 )
   .split(",")
   .map((s) => s.trim())
