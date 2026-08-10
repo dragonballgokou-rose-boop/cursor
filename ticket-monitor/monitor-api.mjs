@@ -62,7 +62,20 @@ const OPEN_URL =
 
 // 通知しない席種
 const EXCLUDE_PATTERN = new RegExp(
-  (process.env.EXCLUDE_KEYWORDS ?? "バリアフリー,親子,女性")
+  (process.env.EXCLUDE_KEYWORDS ?? "バリアフリー,親子,女性,見切れ")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .join("|")
+);
+
+// この価格未満の出品は通知しない（0で無効化）。
+// 指定席12,000/注釈付11,000/見切れ9,900 なので、12000なら指定席・アリーナのみ
+const MIN_PRICE = Number(process.env.MIN_PRICE ?? 12000) || 0;
+
+// この席種名を含む出品だけ通知する（許可リスト）
+const ALLOW_PATTERN = new RegExp(
+  (process.env.SEAT_KEYWORDS ?? "指定席,アリーナ")
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean)
@@ -173,17 +186,31 @@ async function checkTarget(t) {
 
   const items = arr.map((o) => {
     const s = JSON.stringify(o);
+    // 価格は sale_price フィールド（実データで確認済み）。無ければ文字列から拾う
+    const price =
+      typeof o.sale_price === "number"
+        ? o.sale_price
+        : Number((s.match(/"(?:sale_)?price"\s*:\s*(\d+)/) ?? [])[1]) || null;
     return {
       id: (s.match(/RTK_[A-Za-z0-9_-]+/) ?? [null])[0],
       excluded: EXCLUDE_PATTERN.test(s),
       arena: ARENA_PATTERN.test(s),
+      price,
       raw: s,
     };
   });
 
-  // モードに応じた対象出品: all=除外以外すべて / arena=アリーナのみ
+  // 通知条件（三重チェック）:
+  //   1. 席種名が許可リスト（指定席/アリーナ）に一致
+  //   2. 除外語（バリアフリー/親子/女性/見切れ）を含まない
+  //   3. 価格が MIN_PRICE 以上（価格不明なら通知する側に倒す）
+  // さらにモード: all=上記すべて / arena=そのうちアリーナのみ
   const okItems = items.filter(
-    (i) => !i.excluded && (t.mode === "all" || i.arena)
+    (i) =>
+      ALLOW_PATTERN.test(i.raw) &&
+      !i.excluded &&
+      (i.price == null || i.price >= MIN_PRICE) &&
+      (t.mode === "all" || i.arena)
   );
   const okIds = okItems.map((i) => i.id ?? i.raw.slice(0, 60));
 
@@ -244,7 +271,8 @@ console.log("=== みんなのチケット リセール出品ウォッチャー�
 for (const t of TARGETS) {
   console.log(`対象公演  : ${t.label}（${t.start}）… ${t.mode === "arena" ? "アリーナのみ" : "全席種"}`);
 }
-console.log(`除外席種  : ${process.env.EXCLUDE_KEYWORDS ?? "バリアフリー,親子,女性"}`);
+console.log(`対象席種  : ${process.env.SEAT_KEYWORDS ?? "指定席,アリーナ"}（${MIN_PRICE > 0 ? `${MIN_PRICE.toLocaleString()}円以上` : "価格制限なし"}）`);
+console.log(`除外席種  : ${process.env.EXCLUDE_KEYWORDS ?? "バリアフリー,親子,女性,見切れ"}`);
 console.log(`間隔      : ${CHECK_INTERVAL_SEC}秒（CHECK_INTERVAL=0.5 まで短縮可）`);
 console.log("検知したら出品詳細ページを直接開きます。購入は自分の手で。");
 console.log("⚠️ 同日複数枚は同行者に分配不可。友達の分は友達のアカウントで購入を。");
