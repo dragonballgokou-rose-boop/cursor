@@ -29,8 +29,12 @@ const TICKETS_API_BASE =
   "https://api.nft.rakuten.co.jp/products/v0/mp/tickets/getTickets/1004";
 
 // 監視対象: "開演時刻=モード" のカンマ区切り。モードは all（全席種）| arena（アリーナのみ）
+// コマンド引数でも指定可（環境変数の書き方がOSで違うため）:
+//   node monitor-api.mjs "2026-08-22T18:00:00=all"
 const TARGETS = (
-  process.env.TARGETS ?? "2026-08-22T18:00:00=all,2026-08-23T18:00:00=arena"
+  process.argv[2] ??
+  process.env.TARGETS ??
+  "2026-08-22T18:00:00=all,2026-08-23T18:00:00=arena"
 )
   .split(",")
   .map((s) => s.trim())
@@ -92,8 +96,13 @@ function openBrowser(url) {
 }
 
 function speak(message) {
-  if (process.platform !== "darwin") return;
-  exec(`say -v Kyoko ${JSON.stringify(message)}`, () => {});
+  if (process.platform === "darwin") {
+    exec(`say -v Kyoko ${JSON.stringify(message)}`, () => {});
+  } else if (process.platform === "win32") {
+    // Windowsは標準の音声合成で読み上げ（日本語音声がなければ英語読みになるが音は鳴る）
+    const ps = `Add-Type -AssemblyName System.Speech; (New-Object System.Speech.Synthesis.SpeechSynthesizer).Speak('${message.replace(/'/g, "''")}')`;
+    exec(`powershell -NoProfile -Command "${ps}"`, () => {});
+  }
 }
 
 function notify(title, message) {
@@ -105,6 +114,8 @@ function notify(title, message) {
   } else if (process.platform === "linux") {
     exec(`notify-send ${JSON.stringify(title)} ${JSON.stringify(message)}`, () => {});
   }
+  // Windowsの通知バナーは省略（ブラウザ自動オープン＋読み上げで十分、
+  // メッセージボックスは購入操作からフォーカスを奪うため使わない）
 }
 
 const COMMON_HEADERS = {
