@@ -86,7 +86,7 @@ function notify(title, message) {
 // もし開いたページが違っていたら、実際の出品詳細ページのURLに合わせて
 // ITEM_URL_TEMPLATE 環境変数で上書きする
 const ITEM_URL_TEMPLATE =
-  process.env.ITEM_URL_TEMPLATE ?? "https://nft.rakuten.co.jp/item/{id}";
+  process.env.ITEM_URL_TEMPLATE ?? "https://nft.rakuten.co.jp/moments/{id}/";
 
 const COMMON_HEADERS = {
   Accept: "application/json",
