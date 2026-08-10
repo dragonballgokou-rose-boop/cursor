@@ -112,6 +112,8 @@ await page.route("**/*", (route) => {
 });
 
 let alreadyAlerted = new Set();
+let fastAlerted = new Set(); // 行の出現だけで出す速報の管理
+let standDownAnnounced = new Set(); // 速報後の「ハズレでした」報告の管理
 let checkCount = 0;
 
 async function getPageText() {
@@ -137,7 +139,7 @@ async function expandAndExtract(rowLabel) {
     const row = page.getByText(rowLabel).first();
     if ((await row.count()) === 0) return null;
     await row.click({ timeout: 3_000 });
-    await page.waitForTimeout(800); // 展開アニメーション待ち
+    await page.waitForTimeout(400); // 展開アニメーション待ち
   } catch {
     // クリックできなくても現状のテキストで判定を試みる
   }
@@ -205,7 +207,7 @@ async function resolveItemUrl(snippet) {
     if ((await el.count()) > 0) {
       const before = page.url();
       await el.click({ timeout: 2_000 });
-      await page.waitForTimeout(1_200);
+      await page.waitForTimeout(800);
       const after = page.url();
       if (
         after !== before &&
@@ -271,6 +273,26 @@ async function checkOnce() {
   }
 
   const watchSet = new Set(WATCH_KEYWORDS.map(norm));
+
+  // ⚡ 速報: 優先日の行がページに現れた瞬間、展開確認を待たずにまず知らせる。
+  // 数秒でも早く人間が動き出せることを優先し、ハズレなら後から音声で報告する
+  for (const nDate of dateMap.keys()) {
+    if (watchSet.has(nDate) && !fastAlerted.has(nDate)) {
+      fastAlerted.add(nDate);
+      openBrowser(TARGET_URL);
+      speak(`${nDate.replace(/[()（）]/g, " ")} が出ました。確認中`);
+      notify("みんなのチケット ⚡速報", `${nDate} の行が出現。内容確認中…`);
+      console.log(`⚡ [${ts()}] ${nDate} の行が出現 → 速報（内容確認中）`);
+    }
+  }
+  // 行が消えたら速報状態をリセット（次の出品で再速報できるように）
+  for (const d of [...fastAlerted]) {
+    if (!dateMap.has(d)) {
+      fastAlerted.delete(d);
+      standDownAnnounced.delete(d);
+    }
+  }
+
   // 優先日（8/23）を先に処理して、アリーナ検索より先に通知できるようにする
   const ordered = [...dateMap.keys()].sort(
     (a, b) => (watchSet.has(b) ? 1 : 0) - (watchSet.has(a) ? 1 : 0)
@@ -308,10 +330,25 @@ async function checkOnce() {
       foundKeys.add(key);
       if (!alreadyAlerted.has(key)) {
         alreadyAlerted.add(key);
-        const gotoUrl = (await resolveItemUrl(alertLines[0])) ?? TARGET_URL;
-        fireAlert(label, alertLines, gotoUrl, speech);
+        // まず一覧ページで即発報し、出品ページの特定は後から追いかける
+        //（URL解決に2〜3秒かかるため、通知を待たせない）
+        fireAlert(label, alertLines, TARGET_URL, speech);
+        const itemUrl = await resolveItemUrl(alertLines[0]);
+        if (itemUrl) {
+          openBrowser(itemUrl);
+          console.log(`   出品ページ: ${itemUrl}`);
+        }
       }
     } else if (isWatch) {
+      // 速報を出した後にハズレと判明した場合は音声で報告して肩透かしを防ぐ
+      if (fastAlerted.has(nDate) && !standDownAnnounced.has(nDate)) {
+        standDownAnnounced.add(nDate);
+        speak(
+          result.excludedLines.length > 0
+            ? "除外席種のみでした"
+            : "購入可能な出品は見つかりませんでした"
+        );
+      }
       statusNotes.push(
         result.excludedLines.length > 0
           ? `${nDate}: 除外席種のみ（${result.excludedLines[0]}）`
