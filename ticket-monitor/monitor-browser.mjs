@@ -245,8 +245,10 @@ async function resolveItemUrl(snippet) {
   return url;
 }
 
-function fireAlert(label, alertLines, gotoUrl, speech) {
-  openBrowser(gotoUrl);
+function fireAlert(label, alertLines, gotoUrl, speech, { open = true } = {}) {
+  // ブラウザを開くのは1イベント1回だけ。既に開いた後の続報は音声とログのみにして、
+  // 購入操作中のユーザーからフォーカスを奪わない
+  if (open) openBrowser(gotoUrl);
   speak(speech);
   console.log("");
   console.log(`\n🎫🎫🎫 [${ts()}] ${label}`);
@@ -330,14 +332,11 @@ async function checkOnce() {
       foundKeys.add(key);
       if (!alreadyAlerted.has(key)) {
         alreadyAlerted.add(key);
-        // まず一覧ページで即発報し、出品ページの特定は後から追いかける
-        //（URL解決に2〜3秒かかるため、通知を待たせない）
-        fireAlert(label, alertLines, TARGET_URL, speech);
-        const itemUrl = await resolveItemUrl(alertLines[0]);
-        if (itemUrl) {
-          openBrowser(itemUrl);
-          console.log(`   出品ページ: ${itemUrl}`);
-        }
+        // 速報で既にブラウザを開いていたら、本報では開き直さない
+        //（購入クリック中に画面を切り替えてしまう事故の防止）
+        fireAlert(label, alertLines, TARGET_URL, speech, {
+          open: !fastAlerted.has(nDate),
+        });
       }
     } else if (isWatch) {
       // 速報を出した後にハズレと判明した場合は音声で報告して肩透かしを防ぐ
