@@ -119,7 +119,7 @@ async function checkOnce() {
   }
 }
 
-console.log("=== みんなのチケット リセール出品ウォッチャー ===");
+console.log("=== 2nds watcher — みんなのチケット リセール出品ウォッチャー ===");
 console.log(`監視URL   : ${TARGET_URL}`);
 console.log(`キーワード: ${WATCH_KEYWORDS.join(", ")}`);
 console.log(`間隔      : ${CHECK_INTERVAL_SEC}秒`);

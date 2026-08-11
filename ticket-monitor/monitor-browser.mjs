@@ -372,7 +372,7 @@ async function checkOnce() {
   }
 }
 
-console.log("=== みんなのチケット リセール出品ウォッチャー（ブラウザ版） ===");
+console.log("=== 2nds watcher — みんなのチケット リセール出品ウォッチャー（ブラウザ版） ===");
 console.log(`監視URL   : ${TARGET_URL}`);
 console.log(`優先日    : ${WATCH_KEYWORDS.join(", ")}（全席種）`);
 console.log(

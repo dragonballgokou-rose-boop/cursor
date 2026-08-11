@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 /**
+ * 2nds watcher — 二次流通（secondary）を秒（seconds）単位で見張る
  * みんなのチケット リセール出品ウォッチャー（API版・最速・複数公演対応）
  *
  * 狙った公演の出品リストAPI（getTickets）を毎サイクル並列で直接ポーリングする。
@@ -381,7 +382,7 @@ function syncLogToGit() {
 }
 if (GIT_SYNC) setInterval(syncLogToGit, SYNC_INTERVAL_MIN * 60 * 1000);
 
-console.log("=== みんなのチケット リセール出品ウォッチャー（API版・最速） ===");
+console.log("=== 2nds watcher — みんなのチケット リセール出品ウォッチャー（API版・最速） ===");
 for (const t of TARGETS) {
   console.log(`対象公演  : ${t.label}（${t.start}）… ${t.mode === "arena" ? "アリーナのみ" : "全席種"}`);
 }
