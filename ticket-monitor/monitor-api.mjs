@@ -322,20 +322,26 @@ const SYNC_INTERVAL_MIN = Math.max(5, Number(process.env.SYNC_INTERVAL_MIN ?? 10
 
 function syncLogToGit() {
   if (!GIT_SYNC) return;
-  // commitは「変更なし」で失敗してよい（|| true）。過去のpush失敗で
-  // 未送信コミットが残っていても、毎回必ずpushを試みて回収する
+  // 順番が重要: CSVは常に書き込まれ続けているため、
+  // 「先にコミットして作業ツリーを綺麗にする → pull --rebase → push」の順にする。
+  // （pullを先にすると未保存の変更でrebaseが必ず失敗する）
+  // commitは「変更なし」で失敗してよい（|| true）。未送信コミットも毎回pushで回収
   const cmd =
     `cd "${process.cwd()}" && ` +
-    `git pull --rebase -q && ` +
     `git add "${LOG_FILE}" && ` +
     `(git -c user.name="ticket-watcher" -c user.email="watcher@local" commit -q -m "chore: update listings log" || true) && ` +
+    `git pull --rebase -q && ` +
     `git push -q`;
-  exec(cmd, (err) => {
+  exec(cmd, (err, stdout, stderr) => {
     if (err) {
-      // コミット対象なし（変更なし）のときもここに来るので、静かにしておく
-      if (!/nothing to commit|no changes/i.test(String(err))) {
-        console.log(`[${ts()}] ログ同期スキップ: push失敗（監視は継続。git認証を確認）`);
-      }
+      // 実際の失敗理由を表示する（認証・競合など切り分けられるように）
+      const detail =
+        String(stderr || err.message || "")
+          .split("\n")
+          .map((l) => l.trim())
+          .filter(Boolean)
+          .slice(-1)[0] ?? "不明";
+      console.log(`[${ts()}] ログ同期失敗: ${detail.slice(0, 140)}（監視は継続）`);
     } else {
       console.log(`[${ts()}] ログをGitHubへ同期しました`);
     }
