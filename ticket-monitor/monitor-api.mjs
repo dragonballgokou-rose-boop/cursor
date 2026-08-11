@@ -121,6 +121,12 @@ const ARENA_PATTERN = new RegExp(
 const CHECK_INTERVAL_SEC = Math.max(0.5, Number(process.env.CHECK_INTERVAL ?? 1) || 1);
 const NO_OPEN = process.env.NO_OPEN === "1";
 
+// スマホ通知（任意）。ntfy アプリで購読しているトピック名を入れると、
+// 検知時にスマホへプッシュが飛び、タップで出品ページが開く。
+// トピック名はURLを知っていれば誰でも購読できるので、推測されにくい文字列にすること。
+const NTFY_TOPIC = process.env.NTFY_TOPIC ?? "";
+const NTFY_SERVER = process.env.NTFY_SERVER ?? "https://ntfy.sh";
+
 const ts = () => new Date().toLocaleTimeString("ja-JP", { hour12: false });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -143,6 +149,27 @@ function speak(message) {
     const ps = `Add-Type -AssemblyName System.Speech; (New-Object System.Speech.Synthesis.SpeechSynthesizer).Speak('${message.replace(/'/g, "''")}')`;
     exec(`powershell -NoProfile -Command "${ps}"`, () => {});
   }
+}
+
+// スマホへのプッシュ通知（ntfy.sh）。
+// NTFY_TOPIC を設定したときだけ有効。タップすると click のURLがスマホのブラウザで開く。
+// ヘッダに日本語を入れるとHTTPヘッダがASCII制限で壊れるため、JSON publish を使う。
+function pushPhone(title, message, url) {
+  if (!NTFY_TOPIC) return;
+  const body = JSON.stringify({
+    topic: NTFY_TOPIC,
+    title,
+    message,
+    click: url,
+    priority: 5, // max: 端末のサイレント設定を越えて鳴らす
+    tags: ["ticket"],
+  });
+  // 監視ループを止めないよう await しない（失敗しても握りつぶす）
+  fetch(NTFY_SERVER, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body,
+  }).catch(() => {});
 }
 
 function notify(title, message) {
@@ -275,6 +302,11 @@ async function checkTarget(t) {
     console.log(`   ${first.raw.slice(0, 300)}`);
     console.log(`→ ${url}\n`);
     notify("みんなのチケット ⚡検知", `${t.label} ${what} ${fresh.length}件`);
+    pushPhone(
+      `🎫 ${t.label} ${what}`,
+      `${fresh.length}件検知。タップで出品ページを開く`,
+      url
+    );
   }
 
   // 消えた出品はリセットして、再出品されたら再び鳴るようにする
@@ -357,6 +389,9 @@ console.log(`対象席種  : ${process.env.SEAT_KEYWORDS ?? "指定席,アリー
 console.log(`除外席種  : ${process.env.EXCLUDE_KEYWORDS ?? "バリアフリー,親子,女性,見切れ"}`);
 console.log(`間隔      : ${CHECK_INTERVAL_SEC}秒（CHECK_INTERVAL=0.5 まで短縮可）`);
 console.log(`記録      : 全出品の出現・消滅を ${LOG_FILE} に記録（頻度分析用）`);
+console.log(
+  `スマホ通知: ${NTFY_TOPIC ? `ON（${NTFY_SERVER}/${NTFY_TOPIC}）` : "OFF（NTFY_TOPIC=好きな文字列 を付けると有効）"}`
+);
 console.log("検知したら出品詳細ページを直接開きます。購入は自分の手で。");
 console.log("⚠️ 同日複数枚は同行者に分配不可。友達の分は友達のアカウントで購入を。");
 console.log("Ctrl+C で終了\n");
