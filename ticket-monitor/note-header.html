@@ -1,0 +1,60 @@
+<meta charset="utf-8">
+<style>
+  @font-face { font-family:"Noto Sans JP"; src:local("Noto Sans JP"); }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { width:1280px; height:670px; background:#0d0f14; overflow:hidden;
+         font-family:"Noto Sans JP","Helvetica Neue",Arial,sans-serif; }
+  .wrap { width:100%; height:100%; padding:76px 88px; display:flex;
+          flex-direction:column; justify-content:space-between; position:relative; }
+  /* 背景: 出品が消えていく様子を秒バーで表現 */
+  /* 帯は本文と重ならないよう中央の余白だけに置く */
+  .bars { flex:1; display:flex; flex-direction:column; justify-content:center;
+          gap:9px; opacity:.55; margin:6px 0; }
+  .bar { height:7px; border-radius:4px; background:#2a3550; }
+  .bar.o { background:#4a3524; }
+  .bar.hit { background:#3b82f6; }
+  .bar.hit.o { background:#f97316; }
+  .kicker { font-size:19px; letter-spacing:.16em; color:#8b93a7; font-weight:600; }
+  .title { font-size:118px; font-weight:800; letter-spacing:-.035em; line-height:1;
+           color:#f2f4f8; display:flex; align-items:baseline; }
+  .t2nd { color:#3b82f6; }
+  .ts   { color:#f97316; }
+  .tw   { color:#f2f4f8; margin-left:.16em; font-weight:300; }
+  .sub { font-size:25px; color:#aab2c4; line-height:1.62; font-weight:400; }
+  .sub b { color:#f2f4f8; font-weight:700; }
+  .badge { position:absolute; right:88px; top:74px; text-align:right; }
+  .bnum { font-size:96px; font-weight:800; color:#f97316; letter-spacing:-.045em; line-height:.9; }
+  .blab { font-size:16px; color:#8b93a7; letter-spacing:.22em; margin-top:12px; font-weight:600; }
+  .foot { display:flex; align-items:center; gap:22px; font-size:17px; color:#6f7789; }
+  .dot { width:5px; height:5px; border-radius:50%; background:#3b4152; }
+</style>
+<div class="wrap">
+  <div class="badge"><div class="bnum">17″</div><div class="blab">MEDIAN</div></div>
+  <div>
+    <div class="kicker">SECONDARY MARKET WATCHER</div>
+    <div class="title" style="margin-top:22px">
+      <span class="t2nd">2nd</span><span class="ts">s</span><span class="tw">watcher</span>
+    </div>
+  </div>
+  <div class="bars" id="bars"></div>
+  <div>
+    <div class="sub">
+      二次流通（<b>secondary</b>）を、秒（<b>seconds</b>）単位で見張る。<br>
+      乃木坂46 真夏の全国ツアー2026 — <b>3日間 227件</b>の実測記録
+    </div>
+    <div class="foot" style="margin-top:26px">
+      <span>みんなのチケット 個人間マーケットプレイス</span><span class="dot"></span>
+      <span>2026.08.09 → 08.11</span><span class="dot"></span>
+      <span>アリーナ 0件</span>
+    </div>
+  </div>
+</div>
+<script>
+  // 背景の帯: 実測スペルの分布を模したランダム長（短いものが多い）
+  // 実測スペル（秒）を並べた帯。17秒以下＝中央値以内のものだけ色を強くする
+  const seed=[17,6,40,9,3,62,12,24,8,30,55,4,19,10,70,7];
+  const el=document.getElementById('bars');
+  seed.forEach((v,i)=>{const d=document.createElement('div');
+    d.className='bar'+(i%3===2?' o':'')+(v<=17?' hit':'');
+    d.style.width=Math.max(2.5, v/70*100)+'%'; el.appendChild(d);});
+</script>
