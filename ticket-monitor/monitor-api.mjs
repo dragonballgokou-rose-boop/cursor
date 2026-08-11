@@ -322,11 +322,13 @@ const SYNC_INTERVAL_MIN = Math.max(5, Number(process.env.SYNC_INTERVAL_MIN ?? 10
 
 function syncLogToGit() {
   if (!GIT_SYNC) return;
+  // commitは「変更なし」で失敗してよい（|| true）。過去のpush失敗で
+  // 未送信コミットが残っていても、毎回必ずpushを試みて回収する
   const cmd =
     `cd "${process.cwd()}" && ` +
     `git pull --rebase -q && ` +
     `git add "${LOG_FILE}" && ` +
-    `git -c user.name="ticket-watcher" -c user.email="watcher@local" commit -q -m "chore: update listings log" && ` +
+    `(git -c user.name="ticket-watcher" -c user.email="watcher@local" commit -q -m "chore: update listings log" || true) && ` +
     `git push -q`;
   exec(cmd, (err) => {
     if (err) {
