@@ -315,6 +315,32 @@ async function checkOnce() {
   }
 }
 
+// CSVを定期的にGitHubへ自動プッシュ（分析ページの自動更新用）。
+// GIT_SYNC=0 で無効化。失敗しても監視は止めない
+const GIT_SYNC = process.env.GIT_SYNC !== "0";
+const SYNC_INTERVAL_MIN = Math.max(5, Number(process.env.SYNC_INTERVAL_MIN ?? 30) || 30);
+
+function syncLogToGit() {
+  if (!GIT_SYNC) return;
+  const cmd =
+    `cd "${process.cwd()}" && ` +
+    `git pull --rebase -q && ` +
+    `git add "${LOG_FILE}" && ` +
+    `git -c user.name="ticket-watcher" -c user.email="watcher@local" commit -q -m "chore: update listings log" && ` +
+    `git push -q`;
+  exec(cmd, (err) => {
+    if (err) {
+      // コミット対象なし（変更なし）のときもここに来るので、静かにしておく
+      if (!/nothing to commit|no changes/i.test(String(err))) {
+        console.log(`[${ts()}] ログ同期スキップ: push失敗（監視は継続。git認証を確認）`);
+      }
+    } else {
+      console.log(`[${ts()}] ログをGitHubへ同期しました`);
+    }
+  });
+}
+if (GIT_SYNC) setInterval(syncLogToGit, SYNC_INTERVAL_MIN * 60 * 1000);
+
 console.log("=== みんなのチケット リセール出品ウォッチャー（API版・最速） ===");
 for (const t of TARGETS) {
   console.log(`対象公演  : ${t.label}（${t.start}）… ${t.mode === "arena" ? "アリーナのみ" : "全席種"}`);
