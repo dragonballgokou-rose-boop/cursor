@@ -22,6 +22,7 @@
  */
 
 import { exec } from "node:child_process";
+import fs from "node:fs";
 import process from "node:process";
 
 const TICKETS_API_BASE =
@@ -49,8 +50,33 @@ const TARGETS = (
       label: `${Number(dm[1])}月${Number(dm[2])}日`,
       url: `${TICKETS_API_BASE}/${start}`,
       alerted: new Set(), // 通知済み出品ID
+      seen: new Map(), // 現在掲載中の全出品（対象外含む）id → {seatName, price, firstSeen}
     };
   });
+
+// 全出品の出現・消滅をCSVに記録する（頻度分析用）
+const LOG_FILE = process.env.LOG_FILE ?? "listings-log.csv";
+const nowLocal = () => new Date().toLocaleString("sv-SE"); // YYYY-MM-DD HH:mm:ss
+
+function logCsv(event, target, id, seatName, price, note = "") {
+  try {
+    if (!fs.existsSync(LOG_FILE)) {
+      fs.writeFileSync(
+        LOG_FILE,
+        "timestamp,event,performance,seat_name,price,id,note\n"
+      );
+    }
+    const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    fs.appendFileSync(
+      LOG_FILE,
+      [nowLocal(), event, target.label, seatName, price ?? "", id, note]
+        .map(esc)
+        .join(",") + "\n"
+    );
+  } catch {
+    // 記録失敗で監視を止めない
+  }
+}
 
 // 検知時に開く出品詳細ページの形式
 const ITEM_URL_TEMPLATE =
@@ -187,19 +213,40 @@ async function checkTarget(t) {
 
   const items = arr.map((o) => {
     const s = JSON.stringify(o);
-    // 価格は sale_price フィールド（実データで確認済み）。無ければ文字列から拾う
+    // 価格は sale_price（実データで確認済み）。resale_price の場合もある
     const price =
       typeof o.sale_price === "number"
         ? o.sale_price
-        : Number((s.match(/"(?:sale_)?price"\s*:\s*(\d+)/) ?? [])[1]) || null;
+        : typeof o.resale_price === "number"
+          ? o.resale_price
+          : Number((s.match(/"(?:sale_|resale_)?price"\s*:\s*(\d+)/) ?? [])[1]) || null;
     return {
       id: (s.match(/RTK_[A-Za-z0-9_-]+/) ?? [null])[0],
+      seatName: o.product_item_name ?? "",
       excluded: EXCLUDE_PATTERN.test(s),
       arena: ARENA_PATTERN.test(s),
       price,
       raw: s,
     };
   });
+
+  // 出現・消滅をCSVに記録（対象外の席種も含めて全部）
+  const currentIds = new Set();
+  for (const i of items) {
+    const key = i.id ?? i.raw.slice(0, 60);
+    currentIds.add(key);
+    if (!t.seen.has(key)) {
+      t.seen.set(key, { seatName: i.seatName, price: i.price, firstSeen: Date.now() });
+      logCsv("appear", t, key, i.seatName, i.price);
+    }
+  }
+  for (const [key, info] of [...t.seen]) {
+    if (!currentIds.has(key)) {
+      const lifeSec = Math.round((Date.now() - info.firstSeen) / 1000);
+      t.seen.delete(key);
+      logCsv("disappear", t, key, info.seatName, info.price, `掲載${lifeSec}秒`);
+    }
+  }
 
   // 通知条件（三重チェック）:
   //   1. 席種名が許可リスト（指定席/アリーナ）に一致
@@ -275,6 +322,7 @@ for (const t of TARGETS) {
 console.log(`対象席種  : ${process.env.SEAT_KEYWORDS ?? "指定席,アリーナ"}（${MIN_PRICE > 0 ? `${MIN_PRICE.toLocaleString()}円以上` : "価格制限なし"}）`);
 console.log(`除外席種  : ${process.env.EXCLUDE_KEYWORDS ?? "バリアフリー,親子,女性,見切れ"}`);
 console.log(`間隔      : ${CHECK_INTERVAL_SEC}秒（CHECK_INTERVAL=0.5 まで短縮可）`);
+console.log(`記録      : 全出品の出現・消滅を ${LOG_FILE} に記録（頻度分析用）`);
 console.log("検知したら出品詳細ページを直接開きます。購入は自分の手で。");
 console.log("⚠️ 同日複数枚は同行者に分配不可。友達の分は友達のアカウントで購入を。");
 console.log("Ctrl+C で終了\n");
