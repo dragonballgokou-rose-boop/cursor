@@ -318,7 +318,7 @@ async function checkOnce() {
 // CSVを定期的にGitHubへ自動プッシュ（分析ページの自動更新用）。
 // GIT_SYNC=0 で無効化。失敗しても監視は止めない
 const GIT_SYNC = process.env.GIT_SYNC !== "0";
-const SYNC_INTERVAL_MIN = Math.max(5, Number(process.env.SYNC_INTERVAL_MIN ?? 30) || 30);
+const SYNC_INTERVAL_MIN = Math.max(5, Number(process.env.SYNC_INTERVAL_MIN ?? 10) || 10);
 
 function syncLogToGit() {
   if (!GIT_SYNC) return;
