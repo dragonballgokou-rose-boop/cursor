@@ -88,36 +88,37 @@ const OPEN_URL =
   process.env.OPEN_URL ??
   "https://nft.rakuten.co.jp/marketplace/?type=ticket&sort=last_updated_date&limit=12&ticketlimit=6&provider=nogizaka";
 
-// 通知しない席種
-const EXCLUDE_PATTERN = new RegExp(
-  (process.env.EXCLUDE_KEYWORDS ?? "バリアフリー,親子,女性,見切れ")
+// キーワードを "a,b,c" → /a|b|c/ に。空なら「何にもマッチしない」正規表現を返す。
+// new RegExp("") は全てにマッチしてしまうため、除外リストを空にすると
+// 全出品が除外されるという事故が起きる。それを防ぐ。
+function keywordPattern(csv, { emptyMatchesAll }) {
+  const words = String(csv ?? "")
     .split(",")
     .map((s) => s.trim())
-    .filter(Boolean)
-    .join("|")
+    .filter(Boolean);
+  if (words.length > 0) return new RegExp(words.join("|"));
+  return emptyMatchesAll ? /(?:)/ : /(?!)/; // (?!) はどんな文字列にもマッチしない
+}
+
+// 通知しない席種（空にすると除外なし）
+const EXCLUDE_PATTERN = keywordPattern(
+  process.env.EXCLUDE_KEYWORDS ?? "バリアフリー,親子,女性,見切れ",
+  { emptyMatchesAll: false }
 );
 
 // この価格未満の出品は通知しない（0で無効化）。
 // 指定席12,000/注釈付11,000/見切れ9,900 なので、12000なら指定席・アリーナのみ
 const MIN_PRICE = Number(process.env.MIN_PRICE ?? 12000) || 0;
 
-// この席種名を含む出品だけ通知する（許可リスト）
-const ALLOW_PATTERN = new RegExp(
-  (process.env.SEAT_KEYWORDS ?? "指定席,アリーナ")
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .join("|")
-);
+// この席種名を含む出品だけ通知する（許可リスト。空にすると全席種が対象）
+const ALLOW_PATTERN = keywordPattern(process.env.SEAT_KEYWORDS ?? "指定席,アリーナ", {
+  emptyMatchesAll: true,
+});
 
 // arena モードで通知する席種
-const ARENA_PATTERN = new RegExp(
-  (process.env.ARENA_KEYWORDS ?? "アリーナ")
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .join("|")
-);
+const ARENA_PATTERN = keywordPattern(process.env.ARENA_KEYWORDS ?? "アリーナ", {
+  emptyMatchesAll: false,
+});
 
 const CHECK_INTERVAL_SEC = Math.max(0.5, Number(process.env.CHECK_INTERVAL ?? 1) || 1);
 const NO_OPEN = process.env.NO_OPEN === "1";
