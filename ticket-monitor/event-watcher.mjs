@@ -21,21 +21,32 @@
  * DevToolsのネットワークタブからコピーして渡せば、
  * どのイベントであっても出品が出た瞬間に検知できる。
  *
+ * 公演日を見つけたら monitor-api.mjs をそのまま起動して本番監視に入る。
+ * （NO_AUTO=1 で自動起動を止め、コマンドの表示だけにできる）
+ *
  * 環境変数:
  *   NTFY_TOPIC   スマホへプッシュ（monitor-api.mjs と同じ）
  *   NO_OPEN=1    ブラウザを開かない
+ *   NO_AUTO=1    公演日を見つけても monitor-api.mjs を自動起動しない
+ *   LOG_FILE     記録先CSV（既定 listings-log.csv。過去データと混ぜたくないとき用）
+ *   SEAT_KEYWORDS / MIN_PRICE / EXCLUDE_KEYWORDS / CHECK_INTERVAL
+ *                そのまま monitor-api.mjs に引き継がれる
  */
 
-import { exec } from "node:child_process";
+import { exec, spawn } from "node:child_process";
+import path from "node:path";
 import process from "node:process";
+import { fileURLToPath } from "node:url";
 
 const ARG1 = process.argv[2] ?? process.env.EVENT_ID ?? "1004";
 const IS_URL = /^https?:\/\//.test(ARG1);
 const EVENT_ID = IS_URL ? null : ARG1;
-const INTERVAL_SEC = Math.max(30, Number(process.argv[3] ?? process.env.INTERVAL ?? 300) || 300);
+const INTERVAL_SEC = Math.max(1, Number(process.argv[3] ?? process.env.INTERVAL ?? 2) || 2);
 const NTFY_TOPIC = process.env.NTFY_TOPIC ?? "";
 const NTFY_SERVER = process.env.NTFY_SERVER ?? "https://ntfy.sh";
 const NO_OPEN = process.env.NO_OPEN === "1";
+const NO_AUTO = process.env.NO_AUTO === "1";
+const HERE = path.dirname(fileURLToPath(import.meta.url));
 
 const API = IS_URL
   ? ARG1
@@ -108,12 +119,14 @@ console.log("=== 2nds watcher — event-watcher ===");
 console.log(IS_URL ? `監視URL  : ${API}` : `イベントID: ${EVENT_ID}`);
 console.log(`間隔      : ${INTERVAL_SEC}秒`);
 console.log(`スマホ通知: ${NTFY_TOPIC ? "ON" : "OFF（NTFY_TOPIC=好きな文字列 で有効）"}`);
+console.log(`自動起動  : ${NO_AUTO ? "OFF（コマンドを表示するだけ）" : "ON（公演日を見つけたら monitor-api.mjs に切り替え）"}`);
 console.log("公演日が登録されたら知らせます。購入操作はしません。");
 console.log("Ctrl+C で終了\n");
 
 let checks = 0;
 let lastCount = -1;
 
+await (async function loop() {
 for (;;) {
   checks++;
   try {
@@ -129,9 +142,33 @@ for (;;) {
       if (dates.length > 0) {
         dates.forEach((d) => console.log(`   ${d}`));
         const targets = dates.map((d) => `${d}=all`).join(",");
-        console.log("\n↓ このコマンドで監視を開始できます\n");
-        console.log(`SEAT_KEYWORDS="席|スタンディング" MIN_PRICE=0 EXCLUDE_KEYWORDS="" \\`);
-        console.log(`  node monitor-api.mjs "${targets}"\n`);
+        if (NO_AUTO) {
+          console.log("\n↓ このコマンドで監視を開始できます\n");
+          console.log(`SEAT_KEYWORDS="席|スタンディング" MIN_PRICE=0 EXCLUDE_KEYWORDS="" \\`);
+          console.log(`  node monitor-api.mjs "${targets}"\n`);
+        } else {
+          console.log("\n→ monitor-api.mjs に切り替えます（1秒間隔の本番監視）\n");
+          const child = spawn(
+            process.execPath,
+            [path.join(HERE, "monitor-api.mjs"), targets],
+            {
+              stdio: "inherit",
+              cwd: HERE,
+              env: {
+                ...process.env,
+                // 席種が未知のうちは絞らない。起動後のAPIサンプルを見てから絞る
+                SEAT_KEYWORDS: process.env.SEAT_KEYWORDS ?? "席|スタンディング|アリーナ",
+                MIN_PRICE: process.env.MIN_PRICE ?? "0",
+                EXCLUDE_KEYWORDS: process.env.EXCLUDE_KEYWORDS ?? "",
+                GIT_SYNC: process.env.GIT_SYNC ?? "0",
+                // 過去公演のCSVに追記しないよう、公演日ごとにファイルを分ける
+                LOG_FILE: process.env.LOG_FILE ?? `listings-${dates[0].slice(0, 10)}.csv`,
+              },
+            }
+          );
+          child.on("exit", (code) => process.exit(code ?? 0));
+          return; // 監視ループを抜ける
+        }
       } else {
         console.log(`   応答: ${JSON.stringify(data).slice(0, 500)}\n`);
       }
@@ -150,3 +187,4 @@ for (;;) {
   }
   await sleep(INTERVAL_SEC * 1000);
 }
+})();
