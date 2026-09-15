@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * 2nds watcher — event-watcher
- * getEventDates/{id} を緩い間隔で叩き、公演日が登録された瞬間に知らせる。
+ * 指定したAPIを緩い間隔で叩き、「空→中身あり」に変わった瞬間に知らせる。
  *
  * みんなのチケットの個人間マーケットプレイスは、リセール受付が始まるまで
  * そのイベントIDの公演日リストが空（200で {}）になっている。
@@ -12,8 +12,14 @@
  * 購入操作は一切しない。通知だけ。
  *
  * 使い方:
- *   node event-watcher.mjs              # 1004（乃木坂46）を5分おき
- *   node event-watcher.mjs 1004 60      # IDと間隔（秒）を指定
+ *   node event-watcher.mjs                    # 1004（乃木坂46）の公演日を5分おき
+ *   node event-watcher.mjs 1004 60            # イベントIDと間隔（秒）
+ *   node event-watcher.mjs "https://..." 30   # 任意のAPI URLを直接見張る
+ *
+ * URLを直接渡す使い方は、イベントIDが分からないときに有効。
+ * みんなのチケットのマーケットプレイス一覧やcount系APIのURLを
+ * DevToolsのネットワークタブからコピーして渡せば、
+ * どのイベントであっても出品が出た瞬間に検知できる。
  *
  * 環境変数:
  *   NTFY_TOPIC   スマホへプッシュ（monitor-api.mjs と同じ）
@@ -23,13 +29,17 @@
 import { exec } from "node:child_process";
 import process from "node:process";
 
-const EVENT_ID = process.argv[2] ?? process.env.EVENT_ID ?? "1004";
+const ARG1 = process.argv[2] ?? process.env.EVENT_ID ?? "1004";
+const IS_URL = /^https?:\/\//.test(ARG1);
+const EVENT_ID = IS_URL ? null : ARG1;
 const INTERVAL_SEC = Math.max(30, Number(process.argv[3] ?? process.env.INTERVAL ?? 300) || 300);
 const NTFY_TOPIC = process.env.NTFY_TOPIC ?? "";
 const NTFY_SERVER = process.env.NTFY_SERVER ?? "https://ntfy.sh";
 const NO_OPEN = process.env.NO_OPEN === "1";
 
-const API = `https://api.nft.rakuten.co.jp/products/v0/mp/tickets/getEventDates/${EVENT_ID}?limit=50`;
+const API = IS_URL
+  ? ARG1
+  : `https://api.nft.rakuten.co.jp/products/v0/mp/tickets/getEventDates/${EVENT_ID}?limit=50`;
 const MARKET = "https://nft.rakuten.co.jp/marketplace/?type=ticket&sort=last_updated_date&limit=12&ticketlimit=6&provider=nogizaka";
 
 const HEADERS = {
@@ -65,6 +75,19 @@ function pushPhone(title, message, url) {
   }).catch(() => {});
 }
 
+/** 応答から「件数」らしき正の数値を拾う（count系API用） */
+function extractCount(data) {
+  let max = 0;
+  const walk = (v, key) => {
+    if (v == null) return;
+    if (typeof v === "number" && /count|total|num|hits/i.test(key ?? "")) max = Math.max(max, v);
+    else if (Array.isArray(v)) { max = Math.max(max, v.length); v.forEach((x) => walk(x)); }
+    else if (typeof v === "object") for (const [k, x] of Object.entries(v)) walk(x, k);
+  };
+  walk(data, "");
+  return max;
+}
+
 /** 応答のどこにあっても公演日時っぽい文字列を拾う */
 function extractDates(data) {
   const found = new Set();
@@ -82,7 +105,7 @@ function extractDates(data) {
 }
 
 console.log("=== 2nds watcher — event-watcher ===");
-console.log(`イベントID: ${EVENT_ID}`);
+console.log(IS_URL ? `監視URL  : ${API}` : `イベントID: ${EVENT_ID}`);
 console.log(`間隔      : ${INTERVAL_SEC}秒`);
 console.log(`スマホ通知: ${NTFY_TOPIC ? "ON" : "OFF（NTFY_TOPIC=好きな文字列 で有効）"}`);
 console.log("公演日が登録されたら知らせます。購入操作はしません。");
@@ -98,20 +121,26 @@ for (;;) {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     const dates = extractDates(data);
+    const count = extractCount(data);
+    const hit = dates.length > 0 ? dates.length : count;
 
-    if (dates.length > 0 && dates.length !== lastCount) {
-      console.log(`\n🎫🎫🎫 [${ts()}] 公演日が登場しました（${dates.length}件）\n`);
-      dates.forEach((d) => console.log(`   ${d}`));
-      const targets = dates.map((d) => `${d}=all`).join(",");
-      console.log("\n↓ このコマンドで監視を開始できます\n");
-      console.log(`SEAT_KEYWORDS="席|スタンディング" MIN_PRICE=0 EXCLUDE_KEYWORDS="" \\`);
-      console.log(`  node monitor-api.mjs "${targets}"\n`);
-      speak("リセールの公演日が出ました");
-      notify("2nds watcher", `公演日 ${dates.length}件が登録されました`);
-      pushPhone("🎫 リセール開始", `公演日 ${dates.length}件が登録されました`, MARKET);
+    if (hit > 0 && hit !== lastCount) {
+      console.log(`\n🎫🎫🎫 [${ts()}] 中身が出ました（${hit}件）\n`);
+      if (dates.length > 0) {
+        dates.forEach((d) => console.log(`   ${d}`));
+        const targets = dates.map((d) => `${d}=all`).join(",");
+        console.log("\n↓ このコマンドで監視を開始できます\n");
+        console.log(`SEAT_KEYWORDS="席|スタンディング" MIN_PRICE=0 EXCLUDE_KEYWORDS="" \\`);
+        console.log(`  node monitor-api.mjs "${targets}"\n`);
+      } else {
+        console.log(`   応答: ${JSON.stringify(data).slice(0, 500)}\n`);
+      }
+      speak("リセールに出品が出ました");
+      notify("2nds watcher", `${hit}件を検知しました`);
+      pushPhone("🎫 リセール検知", `${hit}件を検知しました`, MARKET);
       openBrowser(MARKET);
-      lastCount = dates.length;
-    } else if (dates.length === 0) {
+      lastCount = hit;
+    } else if (hit === 0) {
       if (lastCount !== 0) console.log(`[${ts()}] まだ空です（リセール受付前）`);
       lastCount = 0;
       if (checks % 12 === 0) console.log(`[${ts()}] 監視中（${checks}回目）: 変化なし`);
