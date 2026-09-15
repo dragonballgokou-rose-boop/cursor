@@ -41,7 +41,7 @@ import { fileURLToPath } from "node:url";
 const ARG1 = process.argv[2] ?? process.env.EVENT_ID ?? "1004";
 const IS_URL = /^https?:\/\//.test(ARG1);
 const EVENT_ID = IS_URL ? null : ARG1;
-const INTERVAL_SEC = Math.max(1, Number(process.argv[3] ?? process.env.INTERVAL ?? 2) || 2);
+const INTERVAL_SEC = Math.max(0.5, Number(process.argv[3] ?? process.env.INTERVAL ?? 1) || 1);
 const NTFY_TOPIC = process.env.NTFY_TOPIC ?? "";
 const NTFY_SERVER = process.env.NTFY_SERVER ?? "https://ntfy.sh";
 const NO_OPEN = process.env.NO_OPEN === "1";
