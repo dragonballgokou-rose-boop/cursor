@@ -6,7 +6,7 @@ W, H, FPS = 1280, 720, 30
 FONT = "/usr/share/fonts/truetype/ipafont-gothic/ipag.ttf"
 if not os.path.exists(FONT):
     FONT = "/usr/share/fonts/opentype/ipafont-gothic/ipag.ttf"
-OUT = "/home/user/probe_manual/プローブの使い方_MDF電話線探索.mp4"
+OUT = "/home/user/cursor/probe_manual/プローブの使い方_MDF電話線探索.mp4"
 TMP = os.path.dirname(os.path.abspath(__file__))
 
 _fc = {}
@@ -17,7 +17,7 @@ def F(size):
 
 NAVY = (20, 40, 80); ORANGE = (240, 130, 20); RED = (210, 40, 40)
 GREEN = (30, 150, 80); GRAY = (120, 120, 120); LIGHT = (235, 240, 248)
-WHITE = (255, 255, 255); BLACK = (25, 25, 25); YELLOW = (255, 215, 0)
+WHITE = (255, 255, 255); BLACK = (25, 25, 25); YELLOW = (255, 215, 0); BLUE = (30, 105, 200)
 
 def ease(x):
     x = max(0.0, min(1.0, x)); return x * x * (3 - 2 * x)
@@ -53,10 +53,10 @@ def draw_jack(d, cx, cy, label="モジュラージャック"):
     d.text((cx, cy + 105), label, font=F(22), fill=BLACK, anchor="mm")
 
 def draw_generator(d, cx, cy, on=True, blink=True):
-    d.rounded_rectangle([cx - 70, cy - 100, cx + 70, cy + 100], 18, fill=ORANGE, outline=BLACK, width=3)
+    d.rounded_rectangle([cx - 70, cy - 100, cx + 70, cy + 100], 18, fill=BLUE, outline=BLACK, width=3)
     d.text((cx, cy - 65), "発信器", font=F(26), fill=WHITE, anchor="mm")
     d.rounded_rectangle([cx - 45, cy - 30, cx + 45, cy + 10], 6, fill=(250, 240, 220))
-    d.text((cx, cy - 10), "TONE", font=F(22), fill=BLACK, anchor="mm")
+    d.text((cx, cy - 10), "SCAN", font=F(22), fill=BLACK, anchor="mm")
     lc = (60, 220, 60) if (on and blink) else (80, 80, 80)
     d.ellipse([cx - 12, cy + 35, cx + 12, cy + 59], fill=lc, outline=BLACK)
 
@@ -69,9 +69,9 @@ def draw_probe(d, tipx, tipy, angle_deg=-60, level=0.0):
     def pt(s, w):
         return (tipx + ux * s + px * w, tipy + uy * s + py * w)
     d.polygon([pt(0, 0), pt(40, 12), pt(40, -12)], fill=(200, 200, 200), outline=BLACK)
-    d.polygon([pt(40, 22), pt(L, 30), pt(L, -30), pt(40, -22)], fill=YELLOW, outline=BLACK)
+    d.polygon([pt(40, 22), pt(L, 30), pt(L, -30), pt(40, -22)], fill=BLUE, outline=BLACK)
     cx, cy = pt(L - 60, 0)
-    d.text((cx, cy), "プローブ", font=F(20), fill=BLACK, anchor="mm")
+    d.text((cx, cy), "プローブ", font=F(20), fill=WHITE, anchor="mm")
     # sound waves
     if level > 0.05:
         sx, sy = pt(L + 10, 0)
@@ -116,7 +116,7 @@ def s_title(d, t):
     d.text((W // 2, 350), "MDFで電話線（お部屋の回線）を探す方法", font=F(40), fill=YELLOW, anchor="mm")
     d.line([W // 2 - int(400 * a), 410, W // 2 + int(400 * a), 410], fill=ORANGE, width=6)
     d.text((W // 2, 470), "エンジニアリング事業部　新人向け作業マニュアル", font=F(30), fill=WHITE, anchor="mm")
-    d.text((W // 2, 640), "※機種によってボタン名・操作が違います。必ず自分の機種の取扱説明書も確認", font=F(22), fill=(190, 200, 220), anchor="mm")
+    d.text((W // 2, 640), "対象機種：グッドマン LANトーンプローブセット GM608（本体表記 NF-806B）", font=F(22), fill=(190, 200, 220), anchor="mm")
 
 @scene(11, "お部屋から「音」を流して、MDFでその音を拾って探します")
 def s_what(d, t):
@@ -148,11 +148,11 @@ def s_tools(d, t):
     d.text((200, 495), "（トーン送信機）", font=F(22), fill=GRAY, anchor="mm")
     draw_probe(d, 330, 470, -60, level=0.6 if int(t * 2) % 2 else 0.0)
     d.text((470, 495), "② プローブ（受信機）", font=F(28), fill=BLACK, anchor="mm")
-    bullets(d, ["③ 接続ケーブル（モジュラー／ワニ口）",
-                "④ 予備の電池（両方分）",
+    bullets(d, ["③ RJ11ワニ口ケーブル（赤・黒クリップ）",
+                "④ 予備の9V電池（006P）×2",
                 "⑤ マーカー・タグ（見つけた線に目印）",
-                "⑥ 携帯電話（2人作業の連絡用）",
-                "⑦ 懐中電灯（MDFは暗いことが多い）"], 700, 180, t, size=28, gap=66)
+                "⑥ 付属イヤホン（うるさい場所用）",
+                "⑦ 携帯電話（2人作業の連絡用）"], 700, 180, t, size=28, gap=66)
 
 @scene(14, "安全第一！ 通話中の回線やベルが鳴っている線には触らない")
 def s_safety(d, t):
@@ -161,10 +161,10 @@ def s_safety(d, t):
     d.text((270, 310), "!", font=F(120), fill=BLACK, anchor="mm")
     bullets(d, ["お客様に「しばらく電話が使えない」ことを説明",
                 "電話機・FAX・ルーター等をジャックから外す",
-                "!着信中の電話線は約75Vの電圧 → 素手で金属部に触れない",
-                "発信器が「電話回線に接続OK」の機種か確認",
+                "!電話線は待機時 約48V・着信時 約75V → 金属部に素手で触れない",
+                "!本機の保護電圧は AC60V/DC42V → 着信・通話中はつながない",
                 "MDFは共用設備。他の線を外したり動かしたりしない",
-                "作業前に端子盤の写真を撮っておく"], 450, 150, t, size=27, gap=68)
+                "作業前に端子盤の写真を撮っておく"], 430, 150, t, size=25, gap=68)
 
 @scene(12, "お部屋のモジュラージャックに発信器をつなぎます（電話機は外す）")
 def s_step1(d, t):
@@ -183,25 +183,25 @@ def s_step1(d, t):
         d.text((640, 510), "ジャックが無い／外せない時は、ワニ口クリップで2本の線（L1・L2）をはさむ", font=F(24), fill=BLACK, anchor="mm")
         d.text((640, 560), "（赤・黒のクリップを1本ずつ。クリップ同士をくっつけない）", font=F(24), fill=GRAY, anchor="mm")
 
-@scene(10, "発信器のスイッチを「TONE（トーン）」に。ランプが点けば送信中です", tone="gen")
+@scene(10, "発信器のスライドスイッチを「SCAN」に。STATUSランプが点滅すれば送信中です", tone="gen")
 def s_step2(d, t):
-    header(d, "STEP 2", "発信器をトーンモードにする")
+    header(d, "STEP 2", "発信器を SCAN にする")
     draw_generator(d, 400, 360, blink=(t > 3 and int(t * 3) % 2 == 0))
     # switch
     d.rounded_rectangle([650, 250, 1050, 330], 10, fill=LIGHT, outline=GRAY, width=2)
-    pos = 0 if t < 2.5 else 2
-    for i, lab in enumerate(["OFF", "CONT", "TONE"]):
+    pos = 1 if t < 2.5 else 0
+    for i, lab in enumerate(["SCAN", "OFF", "TEST"]):
         x = 700 + i * 130
         d.text((x, 290), lab, font=F(26), fill=ORANGE if i == pos else GRAY, anchor="mm")
     x = 700 + pos * 130
     d.rectangle([x - 45, 310, x + 45, 322], fill=ORANGE)
     if t > 3:
-        d.text((850, 400), "ランプ点灯 → OK", font=F(34), fill=GREEN, anchor="mm")
+        d.text((850, 400), "STATUS 点滅 → OK", font=F(34), fill=GREEN, anchor="mm")
         d.text((850, 460), "点かない → 電池切れ・接続を確認", font=F(26), fill=RED, anchor="mm")
     if t > 5:
-        d.text((850, 530), "※音の種類（連続音/断続音）を選べる機種もある", font=F(22), fill=GRAY, anchor="mm")
+        d.text((850, 530), "※ SWITCHボタンで音色を2種類から切替できる", font=F(22), fill=GRAY, anchor="mm")
 
-@scene(14, "まず音量を上げて、端子盤全体をなぞり「音が大きいエリア」を探します", tone="sweep")
+@scene(14, "PUSH TO TESTを押しながら端子盤をなぞり「音が大きいエリア」を探します", tone="sweep")
 def s_step3(d, t):
     header(d, "STEP 3", "MDFでプローブを使う（大まかに探す）")
     x0, y0, cols, rows, p = 140, 270, 10, 7, 46
@@ -218,8 +218,8 @@ def s_step3(d, t):
     STATE["lvl"] = lvl
     draw_probe(d, tx, ty, -40, level=lvl)
     level_meter(d, 830, 560, lvl)
-    d.text((830, 200), "① プローブの電源ON", font=F(28), fill=BLACK)
-    d.text((830, 250), "② 音量ダイヤルは大きめ", font=F(28), fill=BLACK)
+    d.text((830, 200), "① PUSH TO TEST を押し続ける", font=F(28), fill=BLACK)
+    d.text((830, 250), "② 側面のダイヤルで音量を大きめ", font=F(28), fill=BLACK)
     d.text((830, 300), "③ 先端を端子に近づけて", font=F(28), fill=BLACK)
     d.text((870, 340), "ゆっくりなぞる", font=F(28), fill=BLACK)
     d.text((830, 400), "音が大きくなる方へ", font=F(28), fill=RED)
@@ -247,26 +247,26 @@ def s_step4(d, t):
     STATE["lvl"] = lvl
     draw_probe(d, x0 + idx * p + 30, y0 + 30, -50, level=lvl)
     level_meter(d, 780, 560, lvl)
-    d.text((780, 200), "・感度（音量）を少し下げる", font=F(26), fill=BLACK)
+    d.text((780, 200), "・側面ダイヤルで音量を少し下げる", font=F(26), fill=BLACK)
     d.text((780, 245), "・先端を線に直接当てる", font=F(26), fill=BLACK)
     d.text((780, 290), "・隣の線もかすかに鳴るのは普通", font=F(26), fill=BLACK)
     d.text((780, 335), "　→「一番大きい」線を選ぶ", font=F(26), fill=RED)
     if t > 11:
         d.text((x0 + target * p + 30, y0 + 145), "コレ！", font=F(40), fill=RED, anchor="mm")
 
-@scene(13, "発信器を止めると音が消えるか確認。消えればその線で確定です", tone="confirm")
+@scene(13, "発信器をOFFにすると音が消えるか確認。消えればその線で確定です", tone="confirm")
 def s_step5(d, t):
     header(d, "STEP 5", "本当にその線か確認する")
     on = t < 6 or t > 10
     draw_generator(d, 250, 360, on=on, blink=on and int(t * 3) % 2 == 0)
-    d.text((250, 490), "ON" if on else "OFF", font=F(36), fill=GREEN if on else RED, anchor="mm")
+    d.text((250, 490), "SCAN" if on else "OFF", font=F(36), fill=GREEN if on else RED, anchor="mm")
     lvl = 1.0 if on else 0.0
     STATE["lvl"] = lvl
     d.rectangle([640, 470, 760, 520], fill=(255, 170, 170), outline=BLACK, width=2)
     draw_probe(d, 700, 470, -55, level=lvl)
-    d.text((860, 200), "発信器 ON  → 鳴る", font=F(30), fill=BLACK)
-    d.text((860, 250), "発信器 OFF → 消える", font=F(30), fill=BLACK)
-    d.text((860, 300), "＝ この線で確定！", font=F(30), fill=RED)
+    d.text((900, 340), "発信器 SCAN → 鳴る", font=F(30), fill=BLACK)
+    d.text((900, 390), "発信器 OFF  → 消える", font=F(30), fill=BLACK)
+    d.text((900, 440), "＝ この線で確定！", font=F(30), fill=RED)
     d.text((640, 580), "2人作業なら携帯で「止めて」「つけて」と連絡しながら確認", font=F(26), fill=NAVY, anchor="mm")
 
 @scene(10, "見つけた線にはタグで部屋番号を書き、写真を撮って記録します")
@@ -290,16 +290,16 @@ def s_step7(d, t):
                 "外した電話機・FAX・ルーターを元に戻す",
                 "受話器を上げて「ツー」音が出るか確認",
                 "MDFの扉・カバーを元通り閉める",
-                "プローブ・発信器の電源OFF（電池の消耗防止）"], 150, 170, t, size=32, gap=78)
+                "発信器のスイッチを OFF に戻す（電池の消耗防止）"], 150, 170, t, size=32, gap=78)
 
 @scene(14, "うまく見つからない時は、このチェックポイントを見直してみよう")
 def s_tips(d, t):
     header(d, None, "コツ・よくある失敗")
     rows = [("どの線も同じくらい鳴る", "感度を下げる／先端を線に直接当てる"),
-            ("どこも鳴らない", "発信器のランプ・電池・接続を確認"),
-            ("音が小さい・途切れる", "プローブの電池切れを疑う"),
+            ("どこも鳴らない", "PUSH TO TESTを押しているか／STATUS点滅を確認"),
+            ("音が小さい・途切れる", "9V電池切れを疑う（両方）"),
             ("ワニ口の線で探しにくい", "L1かL2どちらか1本に当てて比べる"),
-            ("発信器を置き忘れた", "作業終了チェックを必ず実施")]
+            ("周りがうるさくて聞こえない", "付属イヤホンを使う")]
     d.text((110, 130), "こんな時", font=F(26), fill=GRAY)
     d.text((620, 130), "こうする", font=F(26), fill=GRAY)
     for i, (a, b) in enumerate(rows):
@@ -315,7 +315,7 @@ def s_tips(d, t):
 @scene(12)
 def s_summary(d, t):
     header(d, None, "まとめ：5つの流れ")
-    steps = ["住戸のジャックに発信器", "TONEでランプ確認", "MDFで大まかに探す", "1本ずつ当てて絞る", "ON/OFFで確定→記録→片付け"]
+    steps = ["住戸のジャックに発信器", "SCANでSTATUS点滅を確認", "MDFで大まかに探す", "1本ずつ当てて絞る", "SCAN/OFFで確定→記録→片付け"]
     for i, s in enumerate(steps):
         a = ease((t - 0.3 - i * 0.8) / 0.4)
         if a <= 0: continue
