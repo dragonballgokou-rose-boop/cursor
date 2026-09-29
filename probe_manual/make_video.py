@@ -7,7 +7,8 @@ FONT = "/usr/share/fonts/truetype/ipafont-gothic/ipag.ttf"
 if not os.path.exists(FONT):
     FONT = "/usr/share/fonts/opentype/ipafont-gothic/ipag.ttf"
 OUT = "/home/user/cursor/probe_manual/プローブの使い方_MDF電話線探索.mp4"
-TMP = os.path.dirname(os.path.abspath(__file__))
+import tempfile
+TMP = tempfile.gettempdir()
 
 _fc = {}
 def F(size):
