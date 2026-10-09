@@ -21,6 +21,13 @@
  * 環境変数:
  *   LEAD_MS=0     何ミリ秒手前で開くか（既定0=ちょうど）。マイナスで遅らせる
  *   NO_OPEN=1     ブラウザを開かない（練習用）
+ *   PERF=RTZP626:1108627:1
+ *                 開始時刻後、楽天チケットの公演ボタン（「販売前」→「購入する」）の
+ *                 リンクを1秒おき・最大60回だけ確認し、出たらその公演の申込ページを
+ *                 直接開く。形式は ecd:eid:perf番号。販売ページ自身のスクリプトが
+ *                 読んでいる公開ウィジェットAPIを同じように読むだけで、
+ *                 ボタンを手で押したときと同じページに遷移する（申込操作はしない）。
+ *   WIDGET_API    上記APIのURL（テスト用に差し替え可）
  */
 
 import { exec } from "node:child_process";
@@ -30,6 +37,9 @@ const TARGET_STR = process.argv[2];
 const URL_STR = process.argv[3];
 const LEAD_MS = Number(process.env.LEAD_MS ?? 0) || 0;
 const NO_OPEN = process.env.NO_OPEN === "1";
+const PERF = process.env.PERF ?? "";
+const WIDGET_API =
+  process.env.WIDGET_API ?? "https://cms-api.ticket.rakuten.co.jp/coreui/ajax/performance/widget";
 
 if (!TARGET_STR || !URL_STR) {
   console.error('使い方: node sale-timer.mjs "2026-08-15T12:00:00" "https://..."');
@@ -169,3 +179,40 @@ openBrowser(URL_STR);
 notify("2nds watcher", "販売開始。ページを開きました");
 speak("販売開始です");
 console.log("→ ここから先は自分の手で。混雑エラーが出たら、自分の判断でリロードを。");
+
+if (PERF) await openPerformanceLink(PERF);
+
+/** 公演ボタンが「購入する」になるのを待って、その申込ページを開く */
+async function openPerformanceLink(spec) {
+  const [ecd, eid, perf] = spec.split(":").map((s) => s.trim());
+  const key = `perf_${perf}`;
+  console.log(`\n公演ボタン（${key}）のリンクを確認します…`);
+  for (let i = 1; i <= 60; i++) {
+    try {
+      const res = await fetch(WIDGET_API, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+          Origin: new global.URL(URL_STR).origin,
+          Referer: URL_STR,
+        },
+        body: new URLSearchParams({ ids: perf, ecd, eid }),
+        signal: AbortSignal.timeout(4000),
+      });
+      const html = String(Object.assign({}, ...(await res.json()))[key] ?? "");
+      const m = html.match(/href="([^"]+)"/);
+      if (m) {
+        const link = new global.URL(m[1].replace(/&amp;/g, "&"), URL_STR).href;
+        console.log(`\n🎫 ${new Date().toLocaleTimeString("ja-JP")} 申込ページを開きます: ${link}`);
+        openBrowser(link);
+        speak("申込ページを開きました");
+        return;
+      }
+      process.stdout.write(`\r確認 ${i}回目: まだ「${html.replace(/<[^>]+>/g, "").trim() || "?"}」   `);
+    } catch (e) {
+      process.stdout.write(`\r確認 ${i}回目: 取得失敗（${e.message}）   `);
+    }
+    await sleep(1000);
+  }
+  console.log("\nリンクが出ませんでした。開いた一覧ページから手で進めてください（Cmd+R）。");
+}
