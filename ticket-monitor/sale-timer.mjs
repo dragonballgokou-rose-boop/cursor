@@ -133,7 +133,19 @@ console.log(`前倒し    : ${LEAD_MS}ms`);
 console.log("購入操作は自動化しません。ページを開いたら自分の手で進めてください。\n");
 
 console.log("サーバー時刻とのズレを測定中…");
-const { offset, accuracy } = await measureOffset(URL_STR);
+// 応答が1回でも遅いと誤差が秒単位に膨らむ（実測で±1000ms超が何度も出た）。
+// 誤差が小さい結果が得られるまで測り直し、だめならMacの時計（NTP同期済み）をそのまま使う。
+const MAX_ACCURACY_MS = 200;
+let offset = 0;
+let accuracy = null;
+for (let attempt = 1; attempt <= 5; attempt++) {
+  const r = await measureOffset(URL_STR);
+  if (r.accuracy !== null && r.accuracy <= MAX_ACCURACY_MS) {
+    ({ offset, accuracy } = r);
+    break;
+  }
+  if (r.accuracy !== null) console.log(`  測定誤差±${r.accuracy}ms が大きいので測り直します（${attempt}/5）`);
+}
 if (accuracy === null) {
   console.log("⚠️ 測定できませんでした。Macの時計をそのまま使います。");
   console.log("   先に `sudo sntp -sS time.apple.com` で同期しておくと安心です。\n");
