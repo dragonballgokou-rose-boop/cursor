@@ -20,7 +20,7 @@
  *
  * 環境変数:
  *   LEAD_MS=0     何ミリ秒手前で開くか（既定0=ちょうど）。マイナスで遅らせる
- *   NO_OPEN=1     ブラウザを開かない（練習用）
+ *   NO_OPEN=1     ブラウザを開かず、読み上げ・通知もしない（練習・テスト用）
  *   PERF=RTZP626:1108627:1
  *                 開始時刻後、楽天チケットの公演ボタン（「販売前」→「購入する」）の
  *                 リンクを1秒おき・最大60回だけ確認し、出たらその公演の申込ページを
@@ -114,11 +114,11 @@ function openBrowser(url) {
 }
 
 function speak(msg) {
-  if (process.platform === "darwin") exec(`say -v Kyoko ${JSON.stringify(msg)}`, () => {});
+  if (!NO_OPEN && process.platform === "darwin") exec(`say -v Kyoko ${JSON.stringify(msg)}`, () => {});
 }
 
 function notify(title, msg) {
-  if (process.platform === "darwin") {
+  if (!NO_OPEN && process.platform === "darwin") {
     exec(
       `osascript -e 'display notification ${JSON.stringify(msg)} with title ${JSON.stringify(title)} sound name "Glass"'`,
       () => {}
