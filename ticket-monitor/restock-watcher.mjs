@@ -16,6 +16,7 @@
  *   WIDGET_API  ウィジェットAPIのURL（テスト用に差し替え可）
  *   PAGE_URL    Referer に使う販売ページURL
  *   QUIET=1     毎回のログを出さず、変化時と1分ごとだけ出す
+ *   KEEP_AGREEMENT=1  規約同意ページを開く（既定は席種選択ページへ直接）
  */
 
 import { execFile } from "node:child_process";
@@ -33,6 +34,7 @@ const PERFS = String(process.argv[3] ?? "")
 const INTERVAL_SEC = Math.max(2, Number(process.argv[4] ?? 3) || 3);
 const NO_OPEN = process.env.NO_OPEN === "1";
 const QUIET = process.env.QUIET === "1";
+const KEEP_AGREEMENT = process.env.KEEP_AGREEMENT === "1";
 const WIDGET_API =
   process.env.WIDGET_API ?? "https://cms-api.ticket.rakuten.co.jp/coreui/ajax/performance/widget";
 const PAGE_URL = process.env.PAGE_URL ?? `https://ticket.rakuten.co.jp/music/${String(ecd).toLowerCase()}/`;
@@ -82,7 +84,11 @@ for (let n = 1; ; n++) {
       states.push(`${p.label}=${text}`);
       if (m && !p.opened) {
         p.opened = true;
-        const link = new URL(m[1].replace(/&amp;/g, "&"), PAGE_URL).href;
+        const agreement = new URL(m[1].replace(/&amp;/g, "&"), PAGE_URL).href;
+        // 規約同意ページ（/cart/performances/agreement/ID）を飛ばして席種選択（/cart/performances/ID）を開く
+        const link = KEEP_AGREEMENT
+          ? agreement
+          : agreement.replace("/cart/performances/agreement/", "/cart/performances/");
         console.log(`\n🎫🎫🎫 [${ts()}] ${p.label} が「${text}」になりました → ${link}\n`);
         openBrowser(link);
         notify("2nds watcher", `${p.label} が購入可能になりました`);
