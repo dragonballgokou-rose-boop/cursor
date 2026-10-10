@@ -15,6 +15,7 @@
  *   NO_OPEN=1   ブラウザを開かず、読み上げ・通知もしない（テスト用）
  *   WIDGET_API  ウィジェットAPIのURL（テスト用に差し替え可）
  *   PAGE_URL    Referer に使う販売ページURL
+ *   QUIET=1     毎回のログを出さず、変化時と1分ごとだけ出す
  */
 
 import { execFile } from "node:child_process";
@@ -31,6 +32,7 @@ const PERFS = String(process.argv[3] ?? "")
   });
 const INTERVAL_SEC = Math.max(2, Number(process.argv[4] ?? 3) || 3);
 const NO_OPEN = process.env.NO_OPEN === "1";
+const QUIET = process.env.QUIET === "1";
 const WIDGET_API =
   process.env.WIDGET_API ?? "https://cms-api.ticket.rakuten.co.jp/coreui/ajax/performance/widget";
 const PAGE_URL = process.env.PAGE_URL ?? `https://ticket.rakuten.co.jp/music/${String(ecd).toLowerCase()}/`;
@@ -90,12 +92,11 @@ for (let n = 1; ; n++) {
       }
     }
     const line = states.join(" / ");
-    if (line !== lastStates) {
-      console.log(`[${ts()}] ${line}`);
-      lastStates = line;
-    } else if (n % 30 === 0) {
-      console.log(`[${ts()}] 監視中（${n}回目）: 変化なし`);
+    // 毎回1行出す（動いていることが目で見て分かるように）。QUIET=1 なら変化時と1分ごとだけ
+    if (!QUIET || line !== lastStates || n % 30 === 0) {
+      console.log(`[${ts()}] 監視中（${n}回目）: ${line}${line !== lastStates && n > 1 ? "  ← 変化" : ""}`);
     }
+    lastStates = line;
   } catch (e) {
     console.log(`[${ts()}] 取得失敗: ${e.message}（継続）`);
   }
