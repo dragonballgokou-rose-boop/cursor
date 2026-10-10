@@ -9,7 +9,7 @@
  * 申込・決済は一切しない。ここから先は自分の手で。
  *
  * 使い方:
- *   node restock-watcher.mjs RTZP626:1108627 "1=10/26 神奈川,10=12/2 福岡" [間隔秒]
+ *   node restock-watcher.mjs RTZP626:1108627 "1=10/26 神奈川,10=12/2 福岡" [間隔秒(既定3・最短2)]
  *
  * 環境変数:
  *   NO_OPEN=1   ブラウザを開かず、読み上げ・通知もしない（テスト用）
@@ -29,14 +29,14 @@ const PERFS = String(process.argv[3] ?? "")
     const [id, label = `perf ${s}`] = s.split("=");
     return { id: id.trim(), label: label.trim(), opened: false };
   });
-const INTERVAL_SEC = Math.max(5, Number(process.argv[4] ?? 10) || 10);
+const INTERVAL_SEC = Math.max(2, Number(process.argv[4] ?? 3) || 3);
 const NO_OPEN = process.env.NO_OPEN === "1";
 const WIDGET_API =
   process.env.WIDGET_API ?? "https://cms-api.ticket.rakuten.co.jp/coreui/ajax/performance/widget";
 const PAGE_URL = process.env.PAGE_URL ?? `https://ticket.rakuten.co.jp/music/${String(ecd).toLowerCase()}/`;
 
 if (!ecd || !eid || PERFS.length === 0) {
-  console.error('使い方: node restock-watcher.mjs RTZP626:1108627 "1=10/26 神奈川,10=12/2 福岡" [間隔秒]');
+  console.error('使い方: node restock-watcher.mjs RTZP626:1108627 "1=10/26 神奈川,10=12/2 福岡" [間隔秒(既定3・最短2)]');
   process.exit(1);
 }
 
