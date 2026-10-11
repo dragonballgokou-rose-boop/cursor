@@ -34,26 +34,75 @@ const TICKETS_API_BASE =
 // コマンド引数でも指定可（環境変数の書き方がOSで違うため）:
 //   node monitor-api.mjs "2026-08-22T18:00:00=all"
 // 全席確保済みのため、両日ともアリーナ指定のみ（アップグレード狙い）
-const TARGETS = (
+const TARGET_SPEC =
   process.argv[2] ??
   process.env.TARGETS ??
-  "2026-08-22T18:00:00=arena,2026-08-23T18:00:00=arena"
-)
-  .split(",")
+  "2026-08-22T18:00:00=arena,2026-08-23T18:00:00=arena";
+
+// "auto" を指定すると、監視しながら getEventDates で公演日を拾い続け、
+// 新しい公演日が現れたら監視対象に足していく。
+// 出品が1件も無い瞬間は getEventDates が空を返すため、起動時に一度だけ
+// 取得する方式だと「そのとき出品のあった公演」しか掴めない。常に拾い直す。
+const AUTO_MODE = /(^|,)\s*auto\s*(=|$|,)/.test(TARGET_SPEC);
+const AUTO_EVENT_ID = process.env.EVENT_ID ?? TICKETS_API_BASE.split("/").pop();
+const EVENT_DATES_API = process.env.EVENT_DATES_API ?? `https://api.nft.rakuten.co.jp/products/v0/mp/tickets/getEventDates/${AUTO_EVENT_ID}?limit=50`;
+// 公演日の拾い直し間隔（サイクル数）。既定は20サイクルに1回
+const AUTO_REFRESH_EVERY = Math.max(1, Number(process.env.AUTO_REFRESH_EVERY ?? 20) || 20);
+
+function makeTarget(start, mode = "all") {
+  const dm = start.match(/-(\d{2})-(\d{2})T/) ?? [null, "?", "?"];
+  return {
+    start,
+    mode,
+    label: `${Number(dm[1])}月${Number(dm[2])}日`,
+    url: `${TICKETS_API_BASE}/${start}`,
+    alerted: new Set(), // 通知済み出品ID
+    seen: new Map(), // 現在掲載中の全出品（対象外含む）id → {seatName, price, firstSeen}
+  };
+}
+
+const TARGETS = TARGET_SPEC.split(",")
   .map((s) => s.trim())
   .filter(Boolean)
+  .filter((s) => !/^auto(=|$)/.test(s))
   .map((s) => {
     const [start, mode = "all"] = s.split("=").map((x) => x.trim());
-    const dm = start.match(/-(\d{2})-(\d{2})T/) ?? [null, "?", "?"];
-    return {
-      start,
-      mode,
-      label: `${Number(dm[1])}月${Number(dm[2])}日`,
-      url: `${TICKETS_API_BASE}/${start}`,
-      alerted: new Set(), // 通知済み出品ID
-      seen: new Map(), // 現在掲載中の全出品（対象外含む）id → {seatName, price, firstSeen}
-    };
+    return makeTarget(start, mode);
   });
+
+// auto のときの既定モード（auto=arena のように書ける）
+const AUTO_DEFAULT_MODE = (TARGET_SPEC.match(/auto=(\w+)/) ?? [null, "all"])[1];
+
+/** getEventDates を読み、まだ監視していない公演日を TARGETS に足す */
+async function refreshTargets() {
+  try {
+    const res = await fetch(EVENT_DATES_API, {
+      headers: COMMON_HEADERS,
+      signal: AbortSignal.timeout(5_000),
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    const found = new Set();
+    const walk = (v) => {
+      if (v == null) return;
+      if (typeof v === "string") {
+        if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(v)) found.add(v.slice(0, 19));
+        return;
+      }
+      if (Array.isArray(v)) return v.forEach(walk);
+      if (typeof v === "object") return Object.values(v).forEach(walk);
+    };
+    walk(data);
+    for (const start of [...found].sort()) {
+      if (TARGETS.some((t) => t.start === start)) continue;
+      const t = makeTarget(start, AUTO_DEFAULT_MODE);
+      TARGETS.push(t);
+      console.log(`[${ts()}] ＋公演を追加: ${t.label}（${start}）… ${TARGETS.length}公演を監視中`);
+    }
+  } catch {
+    // 取得できなくても監視は止めない
+  }
+}
 
 // 全出品の出現・消滅をCSVに記録する（頻度分析用）
 const LOG_FILE = process.env.LOG_FILE ?? "listings-log.csv";
@@ -327,6 +376,12 @@ async function checkTarget(t) {
 
 async function checkOnce() {
   checkCount++;
+  // auto のときは定期的に公演日を拾い直す（新しい公演が出たら足す）
+  if (AUTO_MODE && (checkCount - 1) % AUTO_REFRESH_EVERY === 0) await refreshTargets();
+  if (TARGETS.length === 0) {
+    if (checkCount % 20 === 1) console.log(`[${ts()}] 公演日の登場を待っています（出品ゼロの間は空）`);
+    return;
+  }
   // 全公演を並列チェック（1公演あたり50〜100msなのでサイクルはほぼ変わらない）
   // log モード（記録のみ）の公演は LOG_EVERY サイクルに1回だけ見る（アクセス数を抑える）
   const active = TARGETS.filter((t) => t.mode !== "log" || (checkCount - 1) % LOG_EVERY === 0);
