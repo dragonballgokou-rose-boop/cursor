@@ -15,7 +15,11 @@ BEGIN {
   v["12月1日"]  = "福岡   1日目 12/1(火)";  v["12月2日"]  = "福岡   2日目 12/2(水)";
 }
 {
-  ts = $1; ev = $2; perf = $3; seat = $4; price = $5; note = $7;
+  # 途中から start 列（開演日時）が増えたので、列数で新旧を見分ける。
+  # 旧: timestamp,event,performance,seat_name,price,id,note          （7列）
+  # 新: timestamp,event,performance,start,seat_name,price,id,note    （8列）
+  if (NF >= 8) { ts = $1; ev = $2; perf = $3; seat = $5; price = $6; note = $8 }
+  else         { ts = $1; ev = $2; perf = $3; seat = $4; price = $5; note = $7 }
   gsub(/^"/, "", ts); gsub(/"$/, "", note);
   sub(/^2026-/, "", ts);
   name = (perf in v) ? v[perf] : perf;
