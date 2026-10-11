@@ -27,6 +27,9 @@ export SEAT_KEYWORDS="${SEAT_KEYWORDS:-}"
 export EXCLUDE_KEYWORDS="${EXCLUDE_KEYWORDS:-女性}"
 export MIN_PRICE="${MIN_PRICE:-0}"
 export LOG_FILE="${LOG_FILE:-listings-6ki-resale.csv}"
+# 福岡は滅多に出ない。出たときの1回で決めるしかないので、他公演の通知と
+# 区別がつくように鳴り方を変える。PRIORITY="" で無効化できる。
+export PRIORITY="${PRIORITY-2026-12-01,2026-12-02}"
 [ -f .ntfy-topic ] && export NTFY_TOPIC="$(cat .ntfy-topic)"
 
 # 二重起動は二重記録になる。今日それでデータを濁らせたので、先に止める。

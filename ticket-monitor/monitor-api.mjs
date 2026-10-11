@@ -74,12 +74,21 @@ function saveKnownDates(dates) {
   }
 }
 
+// どうしても取りたい公演。滅多に出ない公演は、出たときの1回で決めるしかない。
+// 他公演の通知に紛れて反応が遅れるのを防ぐため、鳴り方をはっきり変える。
+const PRIORITY_SPEC = String(process.env.PRIORITY ?? "");
+const PRIORITY_LIST = PRIORITY_SPEC.split(",").map((x) => x.trim()).filter(Boolean);
+const isPriority = (start, label) =>
+  PRIORITY_LIST.some((p) => start.startsWith(p) || label === p);
+
 function makeTarget(start, mode = "all") {
   const dm = start.match(/-(\d{2})-(\d{2})T/) ?? [null, "?", "?"];
+  const label = `${Number(dm[1])}月${Number(dm[2])}日`;
   return {
     start,
     mode,
-    label: `${Number(dm[1])}月${Number(dm[2])}日`,
+    label,
+    priority: isPriority(start, label),
     url: `${TICKETS_API_BASE}/${start}`,
     alerted: new Set(), // 通知済み出品ID
     seen: new Map(), // 現在掲載中の全出品（対象外含む）id → {seatName, price, firstSeen}
@@ -423,12 +432,23 @@ async function checkTarget(t) {
     const url = first.id ? ITEM_URL_TEMPLATE.replace("{id}", first.id) : OPEN_URL;
     openBrowser(url);
     const what = first.arena ? "アリーナ席" : "チケット";
-    speak(`${t.label}に${what}が出ました。かごに入れてください`);
+    if (t.priority) {
+      // 最優先公演は聞き逃しが致命傷になるので、しつこく読み上げる
+      speak(`${t.label}です。${t.label}が出ました。今すぐ決済してください`);
+      setTimeout(() => speak(`${t.label}です。急いでください`), 2500);
+    } else {
+      speak(`${t.label}に${what}が出ました。かごに入れてください`);
+    }
     console.log("");
-    console.log(`\n🎫🎫🎫 [${ts()}] ${t.label} 購入可能な出品を検知！（${fresh.length}件・${t.mode === "arena" ? "アリーナ" : "全席種"}）`);
+    const banner = t.priority ? "🚨🚨🚨 最優先" : "🎫🎫🎫";
+    console.log(`\n${banner} [${ts()}] ${t.label} 購入可能な出品を検知！（${fresh.length}件・${t.mode === "arena" ? "アリーナ" : "全席種"}）`);
+    if (t.priority) console.log("   ⚠️ カートに入れただけでは確保されません。決済を完了させた人が勝ちます。");
     console.log(`   ${first.raw.slice(0, 300)}`);
     console.log(`→ ${url}\n`);
-    notify("みんなのチケット ⚡検知", `${t.label} ${what} ${fresh.length}件`);
+    notify(
+      t.priority ? "🚨 最優先公演！今すぐ決済" : "みんなのチケット ⚡検知",
+      `${t.label} ${what} ${fresh.length}件`
+    );
     pushPhone(
       `🎫 ${t.label} ${what}`,
       `${fresh.length}件検知。タップで出品ページを開く`,
@@ -440,7 +460,11 @@ async function checkTarget(t) {
   for (const id of [...t.alerted]) {
     if (!okIds.includes(id)) {
       t.alerted.delete(id);
-      console.log(`[${ts()}] ${t.label} の出品が消えました: ${id}`);
+      // 消えた＝売れた とは限らない。誰かがカートに入れただけなら、
+      // 決済されずに戻ってくる。だから諦めずに待つ価値がある。
+      console.log(
+        `[${ts()}] ${t.label} の出品が消えました: ${id}${t.priority ? "（決済されなければ戻ります。待機継続）" : ""}`
+      );
     }
   }
 
@@ -558,7 +582,7 @@ if (GIT_SYNC) setInterval(syncLogToGit, SYNC_INTERVAL_MIN * 60 * 1000);
 console.log("=== 2nds watcher — みんなのチケット リセール出品ウォッチャー（API版・最速） ===");
 for (const t of TARGETS) {
   console.log(
-    `対象公演  : ${t.label}（${t.start}）… ${t.mode === "arena" ? "アリーナのみ" : t.mode === "log" ? `記録のみ（${LOG_EVERY}サイクルに1回）` : "全席種"}`
+    `対象公演  : ${t.label}（${t.start}）… ${t.mode === "arena" ? "アリーナのみ" : t.mode === "log" ? `記録のみ（${LOG_EVERY}サイクルに1回）` : "全席種"}${t.priority ? "  🚨最優先" : ""}`
   );
 }
 console.log(`対象席種  : ${process.env.SEAT_KEYWORDS ?? "指定席,アリーナ"}（${MIN_PRICE > 0 ? `${MIN_PRICE.toLocaleString()}円以上` : "価格制限なし"}）`);
