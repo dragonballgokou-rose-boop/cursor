@@ -484,9 +484,11 @@ async function checkOnce() {
   }
 
   if (checkCount % 30 === 1) {
-    const summary = results
-      .map((r) => (r.status === "fulfilled" ? r.value : "取得失敗"))
-      .join(" / ");
+    const parts = results.map((r) => (r.status === "fulfilled" ? r.value : "取得失敗"));
+    // 公演が増えると1行に収まらず折り返して読みにくい。出品ゼロが普通の状態
+    // なので、全公演ゼロのときは1行にまとめる。中身があるときだけ内訳を出す。
+    const allEmpty = parts.every((p) => /=0件$/.test(p));
+    const summary = allEmpty ? `${parts.length}公演すべて0件` : parts.join(" / ");
     console.log(`[${ts()}] 監視中（${checkCount}回目）: ${summary}`);
   }
 }
