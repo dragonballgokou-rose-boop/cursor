@@ -46,8 +46,11 @@ const TARGET_SPEC =
 const AUTO_MODE = /(^|,)\s*auto\s*(=|$|,)/.test(TARGET_SPEC);
 const AUTO_EVENT_ID = process.env.EVENT_ID ?? TICKETS_API_BASE.split("/").pop();
 const EVENT_DATES_API = process.env.EVENT_DATES_API ?? `https://api.nft.rakuten.co.jp/products/v0/mp/tickets/getEventDates/${AUTO_EVENT_ID}?limit=50`;
-// 公演日の拾い直し間隔（サイクル数）。既定は20サイクルに1回
-const AUTO_REFRESH_EVERY = Math.max(1, Number(process.env.AUTO_REFRESH_EVERY ?? 20) || 20);
+// 公演日の拾い直し間隔（サイクル数）。
+// まだ1公演も掴めていない間は毎サイクル拾う。出品の寿命は数秒しかないので、
+// 拾い直しの谷間に出た出品は、その公演ごと永久に見逃すことになるため。
+// 公演を掴んだあとも、未知の公演に出た出品を拾うために短い間隔で見続ける。
+const AUTO_REFRESH_EVERY = Math.max(1, Number(process.env.AUTO_REFRESH_EVERY ?? 4) || 4);
 
 function makeTarget(start, mode = "all") {
   const dm = start.match(/-(\d{2})-(\d{2})T/) ?? [null, "?", "?"];
@@ -377,7 +380,10 @@ async function checkTarget(t) {
 async function checkOnce() {
   checkCount++;
   // auto のときは定期的に公演日を拾い直す（新しい公演が出たら足す）
-  if (AUTO_MODE && (checkCount - 1) % AUTO_REFRESH_EVERY === 0) await refreshTargets();
+  if (AUTO_MODE) {
+    const every = TARGETS.length === 0 ? 1 : AUTO_REFRESH_EVERY;
+    if ((checkCount - 1) % every === 0) await refreshTargets();
+  }
   if (TARGETS.length === 0) {
     if (checkCount % 20 === 1) console.log(`[${ts()}] 公演日の登場を待っています（出品ゼロの間は空）`);
     return;
