@@ -50,7 +50,7 @@ const EVENT_DATES_API = process.env.EVENT_DATES_API ?? `https://api.nft.rakuten.
 // まだ1公演も掴めていない間は毎サイクル拾う。出品の寿命は数秒しかないので、
 // 拾い直しの谷間に出た出品は、その公演ごと永久に見逃すことになるため。
 // 公演を掴んだあとも、未知の公演に出た出品を拾うために短い間隔で見続ける。
-const AUTO_REFRESH_EVERY = Math.max(1, Number(process.env.AUTO_REFRESH_EVERY ?? 4) || 4);
+const AUTO_REFRESH_EVERY = Math.max(1, Number(process.env.AUTO_REFRESH_EVERY ?? 1) || 1);
 
 // 見つけた公演日を覚えておくファイル。再起動しても掴み直さずに済む。
 // 出品が出た瞬間にしか公演日は拾えないので、毎回ゼロから探すと
@@ -112,7 +112,7 @@ async function refreshTargets() {
       headers: COMMON_HEADERS,
       signal: AbortSignal.timeout(5_000),
     });
-    if (!res.ok) return;
+    if (!res.ok) return [];
     const data = await res.json();
     const found = new Set();
     const walk = (v) => {
@@ -125,17 +125,19 @@ async function refreshTargets() {
       if (typeof v === "object") return Object.values(v).forEach(walk);
     };
     walk(data);
-    let added = false;
+    const addedTargets = [];
     for (const start of [...found].sort()) {
       if (TARGETS.some((t) => t.start === start)) continue;
       const t = makeTarget(start, AUTO_DEFAULT_MODE);
       TARGETS.push(t);
-      added = true;
+      addedTargets.push(t);
       console.log(`[${ts()}] ＋公演を追加: ${t.label}（${start}）… ${TARGETS.length}公演を監視中`);
     }
-    if (added) saveKnownDates(TARGETS.map((t) => t.start));
+    if (addedTargets.length > 0) saveKnownDates(TARGETS.map((t) => t.start));
+    return addedTargets;
   } catch {
     // 取得できなくても監視は止めない
+    return [];
   }
 }
 
@@ -411,19 +413,37 @@ async function checkTarget(t) {
 
 async function checkOnce() {
   checkCount++;
-  // auto のときは定期的に公演日を拾い直す（新しい公演が出たら足す）
-  if (AUTO_MODE) {
-    const every = TARGETS.length === 0 ? 1 : AUTO_REFRESH_EVERY;
-    if ((checkCount - 1) % every === 0) await refreshTargets();
+
+  // auto のときは毎サイクル公演日を拾い直す。
+  //
+  // getEventDates は「いま出品がある公演」しか返さないので、まだ一度も
+  // 出品が出ていない公演（福岡など）を事前に登録しておく方法が無い。
+  // getTickets に日付×開演時刻を総当たりする手も試したが、存在しない日時にも
+  // HTTP 200 の空レスポンスを返すため実在判定ができなかった（seed は断念）。
+  //
+  // 事前に知れないなら「出た瞬間に拾う」しかない。そこで
+  //   1. getEventDates をチケット取得と同時に走らせ（サイクル時間を伸ばさない）
+  //   2. 新しい公演が見つかったらその場で即チェックする（次サイクルを待たない）
+  // ことで、未知の公演でも既知の公演と同じ速さで最初の1件に反応する。
+  const jobs = [];
+  if (AUTO_MODE && (checkCount - 1) % AUTO_REFRESH_EVERY === 0) {
+    jobs.push(
+      refreshTargets().then((added) =>
+        added.length > 0 ? Promise.allSettled(added.map((t) => checkTarget(t))) : null
+      )
+    );
   }
+
   if (TARGETS.length === 0) {
     if (checkCount % 20 === 1) console.log(`[${ts()}] 公演日の登場を待っています（出品ゼロの間は空）`);
+    await Promise.allSettled(jobs);
     return;
   }
   // 全公演を並列チェック（1公演あたり50〜100msなのでサイクルはほぼ変わらない）
   // log モード（記録のみ）の公演は LOG_EVERY サイクルに1回だけ見る（アクセス数を抑える）
   const active = TARGETS.filter((t) => t.mode !== "log" || (checkCount - 1) % LOG_EVERY === 0);
-  const results = await Promise.allSettled(active.map((t) => checkTarget(t)));
+  const settled = await Promise.allSettled([...jobs, ...active.map((t) => checkTarget(t))]);
+  const results = settled.slice(jobs.length);
 
   const failed = results.filter((r) => r.status === "rejected");
   if (failed.length > 0) {
