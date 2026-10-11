@@ -30,7 +30,7 @@ const TICKETS_API_BASE =
   process.env.TICKETS_API_BASE ??
   "https://api.nft.rakuten.co.jp/products/v0/mp/tickets/getTickets/1004";
 
-// 監視対象: "開演時刻=モード" のカンマ区切り。モードは all（全席種）| arena（アリーナのみ）
+// 監視対象: "開演時刻=モード" のカンマ区切り。モードは all（全席種）| arena（アリーナのみ）| log（通知せず記録のみ）
 // コマンド引数でも指定可（環境変数の書き方がOSで違うため）:
 //   node monitor-api.mjs "2026-08-22T18:00:00=all"
 // 全席確保済みのため、両日ともアリーナ指定のみ（アップグレード狙い）
@@ -120,6 +120,8 @@ const ARENA_PATTERN = keywordPattern(process.env.ARENA_KEYWORDS ?? "アリーナ
   emptyMatchesAll: false,
 });
 
+// log モードの公演を何サイクルに1回チェックするか
+const LOG_EVERY = Math.max(1, Number(process.env.LOG_EVERY ?? 5) || 5);
 const CHECK_INTERVAL_SEC = Math.max(0.5, Number(process.env.CHECK_INTERVAL ?? 1) || 1);
 const NO_OPEN = process.env.NO_OPEN === "1";
 
@@ -287,7 +289,7 @@ async function checkTarget(t) {
       ALLOW_PATTERN.test(i.raw) &&
       !i.excluded &&
       (i.price == null || i.price >= MIN_PRICE) &&
-      (t.mode === "all" || i.arena)
+      (t.mode === "all" || (t.mode === "arena" && i.arena))
   );
   const okIds = okItems.map((i) => i.id ?? i.raw.slice(0, 60));
 
@@ -326,7 +328,9 @@ async function checkTarget(t) {
 async function checkOnce() {
   checkCount++;
   // 全公演を並列チェック（1公演あたり50〜100msなのでサイクルはほぼ変わらない）
-  const results = await Promise.allSettled(TARGETS.map((t) => checkTarget(t)));
+  // log モード（記録のみ）の公演は LOG_EVERY サイクルに1回だけ見る（アクセス数を抑える）
+  const active = TARGETS.filter((t) => t.mode !== "log" || (checkCount - 1) % LOG_EVERY === 0);
+  const results = await Promise.allSettled(active.map((t) => checkTarget(t)));
 
   const failed = results.filter((r) => r.status === "rejected");
   if (failed.length > 0) {
@@ -385,7 +389,9 @@ if (GIT_SYNC) setInterval(syncLogToGit, SYNC_INTERVAL_MIN * 60 * 1000);
 
 console.log("=== 2nds watcher — みんなのチケット リセール出品ウォッチャー（API版・最速） ===");
 for (const t of TARGETS) {
-  console.log(`対象公演  : ${t.label}（${t.start}）… ${t.mode === "arena" ? "アリーナのみ" : "全席種"}`);
+  console.log(
+    `対象公演  : ${t.label}（${t.start}）… ${t.mode === "arena" ? "アリーナのみ" : t.mode === "log" ? `記録のみ（${LOG_EVERY}サイクルに1回）` : "全席種"}`
+  );
 }
 console.log(`対象席種  : ${process.env.SEAT_KEYWORDS ?? "指定席,アリーナ"}（${MIN_PRICE > 0 ? `${MIN_PRICE.toLocaleString()}円以上` : "価格制限なし"}）`);
 console.log(`除外席種  : ${process.env.EXCLUDE_KEYWORDS ?? "バリアフリー,親子,女性,見切れ"}`);

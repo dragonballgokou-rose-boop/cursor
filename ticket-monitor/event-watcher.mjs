@@ -28,6 +28,7 @@
  *   NTFY_TOPIC   スマホへプッシュ（monitor-api.mjs と同じ）
  *   NO_OPEN=1    ブラウザを開かない
  *   NO_AUTO=1    公演日を見つけても monitor-api.mjs を自動起動しない
+ *   NOTIFY_DATES この日付だけ通知し、他の公演日は記録のみ（例 "2026-10-26"）
  *   ONLY_DATES   この日付だけ監視（例 "2026-10-26,2026-12-02"）。他の公演日は無視
  *   LOG_FILE     記録先CSV（既定 listings-log.csv。過去データと混ぜたくないとき用）
  *   SEAT_KEYWORDS / MIN_PRICE / EXCLUDE_KEYWORDS / CHECK_INTERVAL
@@ -47,6 +48,10 @@ const NTFY_TOPIC = process.env.NTFY_TOPIC ?? "";
 const NTFY_SERVER = process.env.NTFY_SERVER ?? "https://ntfy.sh";
 const NO_OPEN = process.env.NO_OPEN === "1";
 const NO_AUTO = process.env.NO_AUTO === "1";
+const NOTIFY_DATES = String(process.env.NOTIFY_DATES ?? "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
 const ONLY_DATES = String(process.env.ONLY_DATES ?? "")
   .split(",")
   .map((s) => s.trim())
@@ -124,6 +129,7 @@ console.log("=== 2nds watcher — event-watcher ===");
 console.log(IS_URL ? `監視URL  : ${API}` : `イベントID: ${EVENT_ID}`);
 console.log(`間隔      : ${INTERVAL_SEC}秒`);
 if (ONLY_DATES.length) console.log(`対象日    : ${ONLY_DATES.join(", ")}`);
+if (NOTIFY_DATES.length) console.log(`通知する日: ${NOTIFY_DATES.join(", ")}（他の日は記録のみ）`);
 console.log(`スマホ通知: ${NTFY_TOPIC ? "ON" : "OFF（NTFY_TOPIC=好きな文字列 で有効）"}`);
 console.log(`自動起動  : ${NO_AUTO ? "OFF（コマンドを表示するだけ）" : "ON（公演日を見つけたら monitor-api.mjs に切り替え）"}`);
 console.log("公演日が登録されたら知らせます。購入操作はしません。");
@@ -150,7 +156,10 @@ for (;;) {
       console.log(`\n🎫🎫🎫 [${ts()}] 中身が出ました（${hit}件）\n`);
       if (dates.length > 0) {
         dates.forEach((d) => console.log(`   ${d}`));
-        const targets = dates.map((d) => `${d}=all`).join(",");
+        // NOTIFY_DATES 指定時は、その日だけ通知（all）、他の日は記録のみ（log）
+        const targets = dates
+          .map((d) => `${d}=${NOTIFY_DATES.length === 0 || NOTIFY_DATES.some((p) => d.startsWith(p)) ? "all" : "log"}`)
+          .join(",");
         if (NO_AUTO) {
           console.log("\n↓ このコマンドで監視を開始できます\n");
           console.log(`SEAT_KEYWORDS="席|スタンディング" MIN_PRICE=0 EXCLUDE_KEYWORDS="" \\`);
