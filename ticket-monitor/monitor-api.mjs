@@ -148,13 +148,13 @@ function logCsv(event, target, id, seatName, price, note = "") {
     if (!fs.existsSync(LOG_FILE)) {
       fs.writeFileSync(
         LOG_FILE,
-        "timestamp,event,performance,seat_name,price,id,note\n"
+        "timestamp,event,performance,start,seat_name,price,id,note\n"
       );
     }
     const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
     fs.appendFileSync(
       LOG_FILE,
-      [nowLocal(), event, target.label, seatName, price ?? "", id, note]
+      [nowLocal(), event, target.label, target.start, seatName, price ?? "", id, note]
         .map(esc)
         .join(",") + "\n"
     );
