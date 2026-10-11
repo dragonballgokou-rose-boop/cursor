@@ -1,0 +1,18 @@
+{
+  "note": "乃木坂46 6期生全国ツアー2026 の全公演。みんなのチケット(getTickets)のキーに使う開演日時。",
+  "source": "12:00台に起動した監視プロセスの引数から回収。11/17T19:00 は出品APIの performance_start_on で裏が取れている。",
+  "warning": "getEventDates は出品が実在しても公演を返さないことがある（14:54:15に出品があったが同時刻のgetEventDatesは空）。auto モードだけに頼らず、このリストを明示して監視すること。",
+  "event_id": "1004",
+  "performances": [
+    { "start": "2026-10-26T19:00:00", "city": "神奈川", "day": 1 },
+    { "start": "2026-10-27T18:30:00", "city": "神奈川", "day": 2 },
+    { "start": "2026-11-10T19:00:00", "city": "札幌",   "day": 1 },
+    { "start": "2026-11-11T18:30:00", "city": "札幌",   "day": 2 },
+    { "start": "2026-11-17T19:00:00", "city": "大阪",   "day": 1, "venue": "Zepp Osaka Bayside" },
+    { "start": "2026-11-18T18:30:00", "city": "大阪",   "day": 2 },
+    { "start": "2026-11-24T19:00:00", "city": "名古屋", "day": 1 },
+    { "start": "2026-11-25T18:30:00", "city": "名古屋", "day": 2 },
+    { "start": "2026-12-01T19:00:00", "city": "福岡",   "day": 1, "seen_in_resale": false },
+    { "start": "2026-12-02T18:30:00", "city": "福岡",   "day": 2, "seen_in_resale": false }
+  ]
+}
