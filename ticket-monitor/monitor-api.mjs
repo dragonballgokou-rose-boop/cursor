@@ -105,6 +105,11 @@ if (AUTO_MODE) {
   }
 }
 
+// 出品ゼロのときの応答は "{}" の2バイト。これを超える中身があるのに
+// 日時が1つも取れないなら、空なのではなく読めていない。
+const EMPTY_BODY_MAX = Number(process.env.EMPTY_BODY_MAX ?? 8) || 8;
+let warnedUnparsed = false;
+
 /** getEventDates を読み、まだ監視していない公演日を TARGETS に足す */
 async function refreshTargets() {
   try {
@@ -112,8 +117,12 @@ async function refreshTargets() {
       headers: COMMON_HEADERS,
       signal: AbortSignal.timeout(5_000),
     });
-    if (!res.ok) return [];
-    const data = await res.json();
+    if (!res.ok) {
+      console.log(`[${ts()}] ⚠️ 公演一覧の取得が HTTP ${res.status} を返しました`);
+      return [];
+    }
+    const text = await res.text();
+    const data = JSON.parse(text);
     const found = new Set();
     const walk = (v) => {
       if (v == null) return;
@@ -125,6 +134,22 @@ async function refreshTargets() {
       if (typeof v === "object") return Object.values(v).forEach(walk);
     };
     walk(data);
+
+    // 「APIが空を返した」と「返ってきたJSONを読み損ねた」は画面上では
+    // どちらも「何も起きていない」に見える。後者は静かな全盲なので、
+    // 中身があるのに日時を1つも拾えなかったときは必ず声を上げる。
+    if (found.size === 0 && text.length > EMPTY_BODY_MAX) {
+      if (!warnedUnparsed) {
+        warnedUnparsed = true;
+        console.log(
+          `[${ts()}] ⚠️ 公演一覧に日時が見つかりません（${text.length}バイト）。形式が変わった可能性があります:`
+        );
+        console.log(`   ${text.slice(0, 500)}`);
+      }
+    } else {
+      warnedUnparsed = false;
+    }
+
     const addedTargets = [];
     for (const start of [...found].sort()) {
       if (TARGETS.some((t) => t.start === start)) continue;
