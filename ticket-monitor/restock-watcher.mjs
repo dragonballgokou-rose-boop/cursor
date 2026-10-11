@@ -17,6 +17,7 @@
  *   PAGE_URL    Referer に使う販売ページURL
  *   QUIET=1     毎回のログを出さず、変化時と1分ごとだけ出す
  *   KEEP_AGREEMENT=1  規約同意ページを開く（既定は席種選択ページへ直接）
+ *   NOTIFY_PERFS="1"  この perf 番号だけ通知・ページを開く。他は状態をログに残すだけ（既定は全部通知）
  */
 
 import { execFile } from "node:child_process";
@@ -35,6 +36,11 @@ const INTERVAL_SEC = Math.max(2, Number(process.argv[4] ?? 3) || 3);
 const NO_OPEN = process.env.NO_OPEN === "1";
 const QUIET = process.env.QUIET === "1";
 const KEEP_AGREEMENT = process.env.KEEP_AGREEMENT === "1";
+const NOTIFY_PERFS = String(process.env.NOTIFY_PERFS ?? "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+const shouldNotify = (id) => NOTIFY_PERFS.length === 0 || NOTIFY_PERFS.includes(id);
 const WIDGET_API =
   process.env.WIDGET_API ?? "https://cms-api.ticket.rakuten.co.jp/coreui/ajax/performance/widget";
 const PAGE_URL = process.env.PAGE_URL ?? `https://ticket.rakuten.co.jp/music/${String(ecd).toLowerCase()}/`;
@@ -82,7 +88,10 @@ for (let n = 1; ; n++) {
       const m = html.match(/href="([^"]+)"/);
       const text = html.replace(/<[^>]+>/g, "").trim() || "?";
       states.push(`${p.label}=${text}`);
-      if (m && !p.opened) {
+      if (m && !p.opened && !shouldNotify(p.id)) {
+        p.opened = true;
+        console.log(`[${ts()}] （記録のみ）${p.label} が「${text}」になりました`);
+      } else if (m && !p.opened) {
         p.opened = true;
         const agreement = new URL(m[1].replace(/&amp;/g, "&"), PAGE_URL).href;
         // 規約同意ページ（/cart/performances/agreement/ID）を飛ばして席種選択（/cart/performances/ID）を開く
