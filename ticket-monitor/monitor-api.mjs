@@ -91,6 +91,10 @@ function makeTarget(start, mode = "all") {
     priority: isPriority(start, label),
     url: `${TICKETS_API_BASE}/${start}`,
     alerted: new Set(), // 通知済み出品ID
+    // 同じ出品が何度も出入りする。誰かがカートに入れると一覧から消え、
+    // 決済されなければ戻ってくるため。何回目かと前回からの間隔が分かれば、
+    // 「待てば戻る」と判断できる。
+    history: new Map(), // id → { count, lastGoneAt }
     seen: new Map(), // 現在掲載中の全出品（対象外含む）id → {seatName, price, firstSeen}
   };
 }
@@ -400,13 +404,19 @@ async function checkTarget(t) {
     currentIds.add(key);
     if (!t.seen.has(key)) {
       t.seen.set(key, { seatName: i.seatName, price: i.price, firstSeen: Date.now() });
-      logCsv("appear", t, key, i.seatName, i.price);
+      const h = t.history.get(key) ?? { count: 0, lastGoneAt: null };
+      h.count++;
+      h.gapSec = h.lastGoneAt ? Math.round((Date.now() - h.lastGoneAt) / 1000) : null;
+      t.history.set(key, h);
+      logCsv("appear", t, key, i.seatName, i.price, h.count > 1 ? `${h.count}回目` : "");
     }
   }
   for (const [key, info] of [...t.seen]) {
     if (!currentIds.has(key)) {
       const lifeSec = Math.round((Date.now() - info.firstSeen) / 1000);
       t.seen.delete(key);
+      const h = t.history.get(key);
+      if (h) h.lastGoneAt = Date.now();
       logCsv("disappear", t, key, info.seatName, info.price, `掲載${lifeSec}秒`);
     }
   }
@@ -442,6 +452,13 @@ async function checkTarget(t) {
     console.log("");
     const banner = t.priority ? "🚨🚨🚨 最優先" : "🎫🎫🎫";
     console.log(`\n${banner} [${ts()}] ${t.label} 購入可能な出品を検知！（${fresh.length}件・${t.mode === "arena" ? "アリーナ" : "全席種"}）`);
+    const fh = t.history.get(first.id ?? first.raw.slice(0, 60));
+    if (fh && fh.count > 1) {
+      console.log(
+        `   ♻️ この出品は${fh.count}回目です${fh.gapSec != null ? `（前回消えてから${fh.gapSec}秒）` : ""}。` +
+          `取られても決済されなければまた戻ります。`
+      );
+    }
     if (t.priority) console.log("   ⚠️ カートに入れただけでは確保されません。決済を完了させた人が勝ちます。");
     console.log(`   ${first.raw.slice(0, 300)}`);
     console.log(`→ ${url}\n`);
@@ -462,8 +479,11 @@ async function checkTarget(t) {
       t.alerted.delete(id);
       // 消えた＝売れた とは限らない。誰かがカートに入れただけなら、
       // 決済されずに戻ってくる。だから諦めずに待つ価値がある。
+      const h = t.history.get(id);
+      const again = h && h.count > 1 ? `・通算${h.count}回` : "";
       console.log(
-        `[${ts()}] ${t.label} の出品が消えました: ${id}${t.priority ? "（決済されなければ戻ります。待機継続）" : ""}`
+        `[${ts()}] ${t.label} の出品が消えました: ${id}${again}` +
+          (t.priority ? "（決済されなければ戻ります。離席しないでください）" : "")
       );
     }
   }
