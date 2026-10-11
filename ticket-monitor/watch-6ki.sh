@@ -20,7 +20,9 @@ TARGETS="2026-10-26T19:00:00,2026-10-27T18:30:00,\
 
 export CHECK_INTERVAL="${CHECK_INTERVAL:-0.5}"
 export SEAT_KEYWORDS="${SEAT_KEYWORDS:-}"
-export EXCLUDE_KEYWORDS="${EXCLUDE_KEYWORDS:-}"
+# 女性エリアは購入条件を満たせないので通知しない。ただし CSV には記録される
+# （記録は除外判定より前に行われる）ので、傾向分析のデータは失われない。
+export EXCLUDE_KEYWORDS="${EXCLUDE_KEYWORDS:-女性}"
 export MIN_PRICE="${MIN_PRICE:-0}"
 export LOG_FILE="${LOG_FILE:-listings-6ki-resale.csv}"
 [ -f .ntfy-topic ] && export NTFY_TOPIC="$(cat .ntfy-topic)"
