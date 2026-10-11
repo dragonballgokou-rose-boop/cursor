@@ -233,7 +233,16 @@ const ARENA_PATTERN = keywordPattern(process.env.ARENA_KEYWORDS ?? "アリーナ
 
 // log モードの公演を何サイクルに1回チェックするか
 const LOG_EVERY = Math.max(1, Number(process.env.LOG_EVERY ?? 5) || 5);
-const CHECK_INTERVAL_SEC = Math.max(0.5, Number(process.env.CHECK_INTERVAL ?? 1) || 1);
+// 速くするほど取れる確率は上がるが、叩きすぎて弾かれたら全部失う。
+// 基準の間隔で回しつつ、429 が出たら自動で広げ、落ち着いたら少しずつ戻す。
+// 戻すのを遅くしているのは、弾かれるくらいなら遅いほうがましだから。
+const BASE_INTERVAL_SEC = Math.max(0.1, Number(process.env.CHECK_INTERVAL ?? 1) || 1);
+const MAX_INTERVAL_SEC = Math.max(BASE_INTERVAL_SEC, Number(process.env.MAX_INTERVAL ?? 5) || 5);
+const RECOVER_CYCLES = Math.max(1, Number(process.env.RECOVER_CYCLES ?? 240) || 240);
+let intervalSec = BASE_INTERVAL_SEC;
+let throttleHits = 0;
+let calmCycles = 0;
+let lastCycleMs = 0;
 const NO_OPEN = process.env.NO_OPEN === "1";
 
 // スマホ通知（任意）。ntfy アプリで購読しているトピック名を入れると、
@@ -338,6 +347,9 @@ async function checkTarget(t) {
   });
   if (res.status === 404) {
     data = null; // 出品ゼロは404の可能性 → 「出品なし」扱い
+  } else if (res.status === 429) {
+    throttleHits++;
+    throw new Error("HTTP 429 — 叩きすぎです");
   } else if (res.status === 401 || res.status === 403) {
     throw new Error(`HTTP ${res.status} — ログイン必須のようです`);
   } else if (!res.ok) {
@@ -483,13 +495,29 @@ async function checkOnce() {
     failStreak = 0;
   }
 
+  if (throttleHits > 0) {
+    throttleHits = 0;
+    calmCycles = 0;
+    const next = Math.min(MAX_INTERVAL_SEC, Math.round(intervalSec * 2 * 100) / 100);
+    if (next !== intervalSec) {
+      intervalSec = next;
+      console.log(`[${ts()}] ⚠️ 429が出ました。間隔を ${intervalSec}秒 に広げます（弾かれるより遅いほうがまし）`);
+    }
+  } else if (intervalSec > BASE_INTERVAL_SEC && ++calmCycles >= RECOVER_CYCLES) {
+    calmCycles = 0;
+    intervalSec = Math.max(BASE_INTERVAL_SEC, Math.round((intervalSec / 2) * 100) / 100);
+    console.log(`[${ts()}] 落ち着いたので間隔を ${intervalSec}秒 に戻します`);
+  }
+
   if (checkCount % 30 === 1) {
     const parts = results.map((r) => (r.status === "fulfilled" ? r.value : "取得失敗"));
     // 公演が増えると1行に収まらず折り返して読みにくい。出品ゼロが普通の状態
     // なので、全公演ゼロのときは1行にまとめる。中身があるときだけ内訳を出す。
     const allEmpty = parts.every((p) => /=0件$/.test(p));
     const summary = allEmpty ? `${parts.length}公演すべて0件` : parts.join(" / ");
-    console.log(`[${ts()}] 監視中（${checkCount}回目）: ${summary}`);
+    // 実際の検知の遅れ = 間隔 + 1周にかかった時間。体感ではなく数字で出す。
+    const lag = `${intervalSec}秒間隔・1周${lastCycleMs}ms`;
+    console.log(`[${ts()}] 監視中（${checkCount}回目）: ${summary}（${lag}）`);
   }
 }
 
@@ -535,7 +563,7 @@ for (const t of TARGETS) {
 }
 console.log(`対象席種  : ${process.env.SEAT_KEYWORDS ?? "指定席,アリーナ"}（${MIN_PRICE > 0 ? `${MIN_PRICE.toLocaleString()}円以上` : "価格制限なし"}）`);
 console.log(`除外席種  : ${process.env.EXCLUDE_KEYWORDS ?? "バリアフリー,親子,女性,見切れ"}`);
-console.log(`間隔      : ${CHECK_INTERVAL_SEC}秒（CHECK_INTERVAL=0.5 まで短縮可）`);
+console.log(`間隔      : ${BASE_INTERVAL_SEC}秒（429が出たら自動で最大${MAX_INTERVAL_SEC}秒まで広げます）`);
 console.log(`記録      : 全出品の出現・消滅を ${LOG_FILE} に記録（頻度分析用）`);
 console.log(
   `スマホ通知: ${NTFY_TOPIC ? `ON（${NTFY_SERVER}/${NTFY_TOPIC}）` : "OFF（NTFY_TOPIC=好きな文字列 を付けると有効）"}`
@@ -545,6 +573,9 @@ console.log("⚠️ 同日複数枚は同行者に分配不可。友達の分は
 console.log("Ctrl+C で終了\n");
 
 while (true) {
+  const t0 = Date.now();
   await checkOnce();
-  await sleep(CHECK_INTERVAL_SEC * 1000);
+  lastCycleMs = Date.now() - t0;
+  // 1周に時間がかかった分は待ち時間から引く。間隔どおりの頻度を保つため。
+  await sleep(Math.max(0, intervalSec * 1000 - lastCycleMs));
 }
