@@ -52,6 +52,28 @@ const EVENT_DATES_API = process.env.EVENT_DATES_API ?? `https://api.nft.rakuten.
 // 公演を掴んだあとも、未知の公演に出た出品を拾うために短い間隔で見続ける。
 const AUTO_REFRESH_EVERY = Math.max(1, Number(process.env.AUTO_REFRESH_EVERY ?? 4) || 4);
 
+// 見つけた公演日を覚えておくファイル。再起動しても掴み直さずに済む。
+// 出品が出た瞬間にしか公演日は拾えないので、毎回ゼロから探すと
+// 静かな時間帯に起動したとき何も監視できない時間が続く。
+const DATES_FILE = process.env.DATES_FILE ?? "known-performances.json";
+
+function loadKnownDates() {
+  try {
+    const v = JSON.parse(fs.readFileSync(DATES_FILE, "utf8"));
+    return Array.isArray(v) ? v.filter((x) => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveKnownDates(dates) {
+  try {
+    fs.writeFileSync(DATES_FILE, JSON.stringify([...dates].sort(), null, 2) + "\n");
+  } catch {
+    // 保存できなくても監視は続ける
+  }
+}
+
 function makeTarget(start, mode = "all") {
   const dm = start.match(/-(\d{2})-(\d{2})T/) ?? [null, "?", "?"];
   return {
@@ -76,6 +98,13 @@ const TARGETS = TARGET_SPEC.split(",")
 // auto のときの既定モード（auto=arena のように書ける）
 const AUTO_DEFAULT_MODE = (TARGET_SPEC.match(/auto=(\w+)/) ?? [null, "all"])[1];
 
+// 前回までに見つけた公演日を復元する
+if (AUTO_MODE) {
+  for (const start of loadKnownDates()) {
+    if (!TARGETS.some((t) => t.start === start)) TARGETS.push(makeTarget(start, AUTO_DEFAULT_MODE));
+  }
+}
+
 /** getEventDates を読み、まだ監視していない公演日を TARGETS に足す */
 async function refreshTargets() {
   try {
@@ -96,12 +125,15 @@ async function refreshTargets() {
       if (typeof v === "object") return Object.values(v).forEach(walk);
     };
     walk(data);
+    let added = false;
     for (const start of [...found].sort()) {
       if (TARGETS.some((t) => t.start === start)) continue;
       const t = makeTarget(start, AUTO_DEFAULT_MODE);
       TARGETS.push(t);
+      added = true;
       console.log(`[${ts()}] ＋公演を追加: ${t.label}（${start}）… ${TARGETS.length}公演を監視中`);
     }
+    if (added) saveKnownDates(TARGETS.map((t) => t.start));
   } catch {
     // 取得できなくても監視は止めない
   }
