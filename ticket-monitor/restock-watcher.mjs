@@ -20,7 +20,7 @@
  *   NOTIFY_PERFS="1"  この perf 番号だけ通知・ページを開く。他は状態をログに残すだけ（既定は全部通知）
  */
 
-import { execFile } from "node:child_process";
+import { execFile, execFileSync } from "node:child_process";
 import fs from "node:fs";
 import process from "node:process";
 
@@ -87,6 +87,36 @@ const notify = (title, msg) =>
     "-e",
     `display notification ${JSON.stringify(msg)} with title ${JSON.stringify(title)} sound name "Glass"`,
   ]);
+
+// 二重起動すると通知もブラウザも二重になり、どちらが鳴らしたか分からなくなる。
+// 同じ監視が既に動いていたら、黙って増やさず警告して止まる。
+try {
+  const self = String(process.pid);
+  const out = execFileSync("pgrep", ["-f", "restock-watcher.mjs"], { encoding: "utf8" });
+  // pgrep -f は caffeinate や timeout のようなラッパーのコマンドラインにも
+  // 一致してしまう。実行ファイルが node のものだけを本物として数える。
+  const others = out
+    .split("\n")
+    .map((x) => x.trim())
+    .filter((x) => x && x !== self)
+    .filter((pid) => {
+      try {
+        const comm = execFileSync("ps", ["-p", pid, "-o", "comm="], { encoding: "utf8" }).trim();
+        return /(^|\/)node$/.test(comm);
+      } catch {
+        return false; // 既に消えたプロセスは数えない
+      }
+    });
+  if (others.length > 0) {
+    console.error("⚠️ すでに restock-watcher が動いています（PID " + others.join(", ") + "）。");
+    console.error("   二重に鳴らさないため起動しません。古いほうを止めてから実行してください:");
+    console.error("     kill " + others.join(" "));
+    console.error("   どうしても並行させたいときは ALLOW_DUPLICATE=1 を付けてください。");
+    if (process.env.ALLOW_DUPLICATE !== "1") process.exit(1);
+  }
+} catch {
+  // pgrep が無い環境では確認をあきらめて続行する
+}
 
 console.log("=== 2nds watcher — restock-watcher ===");
 console.log(`対象      : ${PERFS.map((p) => `${p.label}(perf ${p.id})`).join(" / ")}`);
