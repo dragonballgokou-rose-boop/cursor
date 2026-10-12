@@ -308,13 +308,25 @@ function pushPhone(title, message, url) {
     priority: 5, // max: 端末のサイレント設定を越えて鳴らす
     tags: ["ticket"],
   });
-  // 監視ループを止めないよう await しない（失敗しても握りつぶす）
+  // 監視ループを止めないよう await しない。ただし失敗を握り潰すと
+  // 「鳴らなかった理由が分からない」状態になるので、必ず表に出す。
   fetch(NTFY_SERVER, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body,
-  }).catch(() => {});
+  })
+    .then((r) => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      pushFailStreak = 0;
+    })
+    .catch((e) => {
+      pushFailStreak++;
+      if (pushFailStreak === 1 || pushFailStreak % 10 === 0) {
+        console.log(`[${ts()}] ⚠️ スマホ通知を送れませんでした（${pushFailStreak}回目）: ${e.message}`);
+      }
+    });
 }
+let pushFailStreak = 0;
 
 function notify(title, message) {
   if (process.platform === "darwin") {

@@ -46,6 +46,48 @@ const shouldNotify = (id) => NOTIFY_PERFS.length === 0 || NOTIFY_PERFS.includes(
 // 状態が変わった瞬間だけCSVに残す（毎回書くと膨れるので変化時のみ）。
 // 「購入する」が何回・何秒出たかを後から数えられるようにしておく。
 const RESTOCK_LOG = process.env.RESTOCK_LOG ?? "restock-log.csv";
+
+// スマホへの通知。NTFY_TOPIC を設定したときだけ有効。
+// タップすると click のURLがスマホのブラウザで開くので、席種選択から直接始められる。
+// 戻り枠は20秒ほど開くことがあり、Macの前にいなくても間に合う可能性がある。
+// 毎回打たなくて済むよう .ntfy-topic があればそれを使う（gitignore 済み）
+const NTFY_TOPIC =
+  process.env.NTFY_TOPIC ??
+  (() => {
+    try {
+      return fs.readFileSync(new URL("./.ntfy-topic", import.meta.url), "utf8").trim();
+    } catch {
+      return "";
+    }
+  })();
+const NTFY_SERVER = process.env.NTFY_SERVER ?? "https://ntfy.sh";
+let pushFailStreak = 0;
+function pushPhone(title, message, url) {
+  if (!NTFY_TOPIC) return;
+  fetch(NTFY_SERVER, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      topic: NTFY_TOPIC,
+      title,
+      message,
+      click: url,
+      priority: 5, // 端末のサイレント設定を越えて鳴らす
+      tags: ["ticket"],
+    }),
+  })
+    .then((r) => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      pushFailStreak = 0;
+    })
+    .catch((e) => {
+      // 握り潰すと「鳴らなかった理由が分からない」状態になる
+      pushFailStreak++;
+      if (pushFailStreak === 1 || pushFailStreak % 10 === 0) {
+        console.log(`[${ts()}] ⚠️ スマホ通知を送れませんでした（${pushFailStreak}回目）: ${e.message}`);
+      }
+    });
+}
 let logFailStreak = 0;
 function logRestock(event, perf, text, note = "") {
   try {
@@ -122,6 +164,9 @@ console.log("=== 2nds watcher — restock-watcher ===");
 console.log(`対象      : ${PERFS.map((p) => `${p.label}(perf ${p.id})`).join(" / ")}`);
 console.log(`間隔      : ${INTERVAL_SEC}秒`);
 console.log(`記録      : 状態の変化を ${RESTOCK_LOG} に残します`);
+console.log(
+  `スマホ通知: ${NTFY_TOPIC ? `ON（${NTFY_SERVER}/${NTFY_TOPIC}）` : "OFF（NTFY_TOPIC=好きな文字列 を付けると有効）"}`
+);
 console.log("「購入する」に戻ったら知らせて申込ページを開きます。申込・決済はしません。\n");
 
 let lastStates = "";
@@ -167,6 +212,7 @@ for (let n = 1; ; n++) {
         openBrowser(link);
         notify("2nds watcher", `${p.label} が購入可能になりました`);
         speak(`${p.label} 購入できます`);
+        pushPhone(`🎫 ${p.label} 購入可能`, "タップで申込ページを開く。止まらず決済まで。", link);
       } else if (!m) {
         if (p.opened) {
           const sec = p.openedAt ? Math.round((Date.now() - p.openedAt) / 1000) : null;
