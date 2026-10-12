@@ -21,6 +21,7 @@
  */
 
 import { execFile } from "node:child_process";
+import fs from "node:fs";
 import process from "node:process";
 
 const [ecd, eid] = String(process.argv[2] ?? "").split(":");
@@ -41,6 +42,30 @@ const NOTIFY_PERFS = String(process.env.NOTIFY_PERFS ?? "")
   .map((s) => s.trim())
   .filter(Boolean);
 const shouldNotify = (id) => NOTIFY_PERFS.length === 0 || NOTIFY_PERFS.includes(id);
+// 画面にしか出さないと、ウィンドウを閉じた時点で「鳴ったのに証拠が無い」になる。
+// 状態が変わった瞬間だけCSVに残す（毎回書くと膨れるので変化時のみ）。
+// 「購入する」が何回・何秒出たかを後から数えられるようにしておく。
+const RESTOCK_LOG = process.env.RESTOCK_LOG ?? "restock-log.csv";
+let logFailStreak = 0;
+function logRestock(event, perf, text, note = "") {
+  try {
+    if (!fs.existsSync(RESTOCK_LOG)) {
+      fs.writeFileSync(RESTOCK_LOG, "timestamp,event,perf_id,label,state,note\n");
+    }
+    const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    fs.appendFileSync(
+      RESTOCK_LOG,
+      [new Date().toLocaleString("sv-SE"), event, perf.id, perf.label, text, note].map(esc).join(",") + "\n"
+    );
+    logFailStreak = 0;
+  } catch (e) {
+    logFailStreak++;
+    if (logFailStreak === 1 || logFailStreak % 10 === 0) {
+      console.log(`[${ts()}] ⚠️ ${RESTOCK_LOG} に書けませんでした（${logFailStreak}回目）: ${e.message}`);
+    }
+  }
+}
+
 const WIDGET_API =
   process.env.WIDGET_API ?? "https://cms-api.ticket.rakuten.co.jp/coreui/ajax/performance/widget";
 const PAGE_URL = process.env.PAGE_URL ?? `https://ticket.rakuten.co.jp/music/${String(ecd).toLowerCase()}/`;
@@ -66,6 +91,7 @@ const notify = (title, msg) =>
 console.log("=== 2nds watcher — restock-watcher ===");
 console.log(`対象      : ${PERFS.map((p) => `${p.label}(perf ${p.id})`).join(" / ")}`);
 console.log(`間隔      : ${INTERVAL_SEC}秒`);
+console.log(`記録      : 状態の変化を ${RESTOCK_LOG} に残します`);
 console.log("「購入する」に戻ったら知らせて申込ページを開きます。申込・決済はしません。\n");
 
 let lastStates = "";
@@ -88,11 +114,20 @@ for (let n = 1; ; n++) {
       const m = html.match(/href="([^"]+)"/);
       const text = html.replace(/<[^>]+>/g, "").trim() || "?";
       states.push(`${p.label}=${text}`);
+      // 文言が変わった瞬間を残す（「予定枚数終了」→「購入する」など）
+      if (p.lastText !== undefined && p.lastText !== text) {
+        logRestock("change", p, text, `前は「${p.lastText}」`);
+      }
+      p.lastText = text;
       if (m && !p.opened && !shouldNotify(p.id)) {
         p.opened = true;
+        p.openedAt = Date.now();
+        logRestock("open", p, text, "通知対象外のため記録のみ");
         console.log(`[${ts()}] （記録のみ）${p.label} が「${text}」になりました`);
       } else if (m && !p.opened) {
         p.opened = true;
+        p.openedAt = Date.now();
+        logRestock("open", p, text);
         const agreement = new URL(m[1].replace(/&amp;/g, "&"), PAGE_URL).href;
         // 規約同意ページ（/cart/performances/agreement/ID）を飛ばして席種選択（/cart/performances/ID）を開く
         const link = KEEP_AGREEMENT
@@ -103,6 +138,11 @@ for (let n = 1; ; n++) {
         notify("2nds watcher", `${p.label} が購入可能になりました`);
         speak(`${p.label} 購入できます`);
       } else if (!m) {
+        if (p.opened) {
+          const sec = p.openedAt ? Math.round((Date.now() - p.openedAt) / 1000) : null;
+          logRestock("close", p, text, sec != null ? `購入可能${sec}秒` : "");
+          console.log(`[${ts()}] ${p.label} の「購入する」が消えました${sec != null ? `（${sec}秒）` : ""}`);
+        }
         p.opened = false; // また売り切れたら、次に戻ったとき再通知する
       }
     }
