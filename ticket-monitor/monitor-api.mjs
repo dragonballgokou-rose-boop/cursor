@@ -22,7 +22,7 @@
  *   TARGETS="2026-08-22T18:00:00=arena,2026-08-23T18:00:00=arena" node monitor-api.mjs
  */
 
-import { exec } from "node:child_process";
+import { exec, execFile } from "node:child_process";
 import fs from "node:fs";
 import process from "node:process";
 
@@ -276,13 +276,19 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 function openBrowser(url) {
   if (NO_OPEN) return;
-  const cmd =
+  // exec はシェルを1枚挟むぶん遅い。execFile で直接起動する。
+  // 実際に何ミリ秒かかっているかは体感では分からないので必ず計測して出す。
+  // ここが数百msなら、監視間隔を詰めるより先にこちらを削るべきと判断できる。
+  const t0 = Date.now();
+  const [cmd, args] =
     process.platform === "darwin"
-      ? `open "${url}"`
+      ? ["open", [url]]
       : process.platform === "win32"
-        ? `start "" "${url}"`
-        : `xdg-open "${url}"`;
-  exec(cmd, () => {});
+        ? ["cmd", ["/c", "start", "", url]]
+        : ["xdg-open", [url]];
+  execFile(cmd, args, () => {
+    console.log(`[${ts()}] ページを開くのに ${Date.now() - t0}ms`);
+  });
 }
 
 function speak(message) {
