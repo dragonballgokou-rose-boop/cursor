@@ -198,10 +198,17 @@ function logCsv(event, target, id, seatName, price, note = "") {
         .map(esc)
         .join(",") + "\n"
     );
-  } catch {
-    // 記録失敗で監視を止めない
+    csvFailStreak = 0;
+  } catch (e) {
+    // 記録失敗で監視は止めないが、黙って落とすと「鳴ったのにログに無い」に
+    // なって原因が追えなくなる。最初の1回と、以後10回ごとに必ず知らせる。
+    csvFailStreak++;
+    if (csvFailStreak === 1 || csvFailStreak % 10 === 0) {
+      console.log(`[${ts()}] ⚠️ ${LOG_FILE} に書けませんでした（${csvFailStreak}回目）: ${e.message}`);
+    }
   }
 }
+let csvFailStreak = 0;
 
 // 検知時に開く出品詳細ページの形式
 const ITEM_URL_TEMPLATE =
