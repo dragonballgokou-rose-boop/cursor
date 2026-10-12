@@ -2,3 +2,4 @@ node_modules/
 *.bak
 .ntfy-topic
 known-performances.json
+watch.log

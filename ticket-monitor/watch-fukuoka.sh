@@ -56,8 +56,10 @@ echo
 trap 'echo; echo "終了しました（$(date "+%H:%M:%S")）"; exit 0' INT TERM
 
 while true; do
-  caffeinate -dimsu node monitor-api.mjs "${TOP},${ALSO},${OTHERS}"
-  code=$?
+  # 画面だけだとウィンドウを閉じた時点で記録が消え、「鳴ったのに証拠が無い」
+  # という状態になる。検知行を含む全出力を watch.log にも残す。
+  caffeinate -dimsu node monitor-api.mjs "${TOP},${ALSO},${OTHERS}" 2>&1 | tee -a watch.log
+  code=${PIPESTATUS[0]}
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] 監視が終了しました（終了コード ${code}）。5秒後に再起動します。" | tee -a run.log
   sleep 5
 done
