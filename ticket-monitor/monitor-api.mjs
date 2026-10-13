@@ -23,7 +23,9 @@
  */
 
 import { exec, execFile } from "node:child_process";
+import crypto from "node:crypto";
 import fs from "node:fs";
+import path from "node:path";
 import process from "node:process";
 
 const TICKETS_API_BASE =
@@ -169,6 +171,7 @@ async function refreshTargets() {
       const t = makeTarget(start, AUTO_DEFAULT_MODE);
       TARGETS.push(t);
       addedTargets.push(t);
+      prewarmTarget(t);
       console.log(`[${ts()}] ＋公演を追加: ${t.label}（${start}）… ${TARGETS.length}公演を監視中`);
     }
     if (addedTargets.length > 0) saveKnownDates(TARGETS.map((t) => t.start));
@@ -291,13 +294,85 @@ function openBrowser(url) {
   });
 }
 
-function speak(message) {
+// 読み上げ（macOS）。
+// say は音が出るまでに合成で 0.9〜1.5秒かかる（実測）。決まり文句は起動時に
+// say -o で音声ファイルに合成しておき、検知時は afplay で再生するだけにする（約0.1秒で鳴り始める）。
+// ファイルが無い・再生に失敗したときは従来どおり say で読み上げる（鳴らないより遅いほうがまし）。
+const SAY_VOICE = process.env.SAY_VOICE ?? "Kyoko";
+const SAY_CACHE_DIR = process.env.SAY_CACHE_DIR ?? path.join(process.cwd(), ".say-cache");
+const sayCache = new Map(); // 文言 → 合成済みファイルのパス
+const prewarmQueue = [];
+let prewarming = false;
+
+function sayFile(message) {
+  const h = crypto.createHash("sha1").update(`${SAY_VOICE}\n${message}`).digest("hex").slice(0, 16);
+  return path.join(SAY_CACHE_DIR, `${h}.aiff`);
+}
+
+function fileReady(f) {
+  try {
+    return fs.statSync(f).size > 0;
+  } catch {
+    return false;
+  }
+}
+
+/** 文言を事前に音声ファイルへ合成しておく（直列・非同期。監視ループは止めない） */
+function prewarmSpeech(message) {
+  if (process.platform !== "darwin" || NO_OPEN) return;
+  if (sayCache.has(message) || prewarmQueue.includes(message)) return;
+  const f = sayFile(message);
+  if (fileReady(f)) {
+    sayCache.set(message, f);
+    return;
+  }
+  prewarmQueue.push(message);
+  if (!prewarming) runPrewarm();
+}
+
+function runPrewarm() {
+  const message = prewarmQueue.shift();
+  if (message === undefined) {
+    prewarming = false;
+    return;
+  }
+  prewarming = true;
+  try {
+    fs.mkdirSync(SAY_CACHE_DIR, { recursive: true });
+  } catch {}
+  const f = sayFile(message);
+  const tmp = `${f}.${process.pid}.tmp.aiff`;
+  execFile("say", ["-v", SAY_VOICE, "-o", tmp, message], (err) => {
+    try {
+      if (!err && fileReady(tmp)) {
+        fs.renameSync(tmp, f); // 書きかけのファイルを再生しないよう、完成してから置く
+        sayCache.set(message, f);
+      } else {
+        fs.rmSync(tmp, { force: true });
+      }
+    } catch {}
+    runPrewarm();
+  });
+}
+
+/** 読み上げる。終わったら onDone を呼ぶ（続けて読み上げたいとき用） */
+function speak(message, onDone = () => {}) {
+  if (NO_OPEN) return onDone();
   if (process.platform === "darwin") {
-    exec(`say -v Kyoko ${JSON.stringify(message)}`, () => {});
+    const f = sayCache.get(message);
+    const viaSay = () => execFile("say", ["-v", SAY_VOICE, message], () => onDone());
+    if (f && fileReady(f)) {
+      execFile("afplay", [f], (err) => (err ? viaSay() : onDone()));
+    } else {
+      viaSay();
+      prewarmSpeech(message); // 次に同じ文言を言うときは速くする
+    }
   } else if (process.platform === "win32") {
     // Windowsは標準の音声合成で読み上げ（日本語音声がなければ英語読みになるが音は鳴る）
     const ps = `Add-Type -AssemblyName System.Speech; (New-Object System.Speech.Synthesis.SpeechSynthesizer).Speak('${message.replace(/'/g, "''")}')`;
-    exec(`powershell -NoProfile -Command "${ps}"`, () => {});
+    execFile("powershell", ["-NoProfile", "-Command", ps], () => onDone());
+  } else {
+    onDone();
   }
 }
 
@@ -335,13 +410,16 @@ function pushPhone(title, message, url) {
 let pushFailStreak = 0;
 
 function notify(title, message) {
+  if (NO_OPEN) return;
+  // シェルを挟まず直接起動する（文言にクォートが入っても壊れない）
   if (process.platform === "darwin") {
-    exec(
-      `osascript -e 'display notification ${JSON.stringify(message)} with title ${JSON.stringify(title)} sound name "Glass"'`,
+    execFile(
+      "osascript",
+      ["-e", `display notification ${JSON.stringify(message)} with title ${JSON.stringify(title)} sound name "Glass"`],
       () => {}
     );
   } else if (process.platform === "linux") {
-    exec(`notify-send ${JSON.stringify(title)} ${JSON.stringify(message)}`, () => {});
+    execFile("notify-send", [title, message], () => {});
   }
   // Windowsの通知バナーは省略（ブラウザ自動オープン＋読み上げで十分、
   // メッセージボックスは購入操作からフォーカスを奪うため使わない）
@@ -469,8 +547,10 @@ async function checkTarget(t) {
     const what = first.arena ? "アリーナ席" : "チケット";
     if (t.priority) {
       // 最優先公演は聞き逃しが致命傷になるので、しつこく読み上げる
-      speak(`${t.label}です。${t.label}が出ました。今すぐ決済してください`);
-      setTimeout(() => speak(`${t.label}です。急いでください`), 2500);
+      // 2回目は1回目を言い終えてから（固定の待ち時間だと、速く鳴るようになった1回目と重なる）
+      speak(`${t.label}です。${t.label}が出ました。今すぐ決済してください`, () =>
+        speak(`${t.label}です。急いでください`)
+      );
     } else {
       speak(`${t.label}に${what}が出ました。かごに入れてください`);
     }
@@ -640,6 +720,19 @@ console.log(
 console.log("検知したら出品詳細ページを直接開きます。購入は自分の手で。");
 console.log("⚠️ 同日複数枚は同行者に分配不可。友達の分は友達のアカウントで購入を。");
 console.log("Ctrl+C で終了\n");
+
+// 検知時に言う文言を先に音声ファイルにしておく（初回の読み上げが約1秒速くなる）
+function prewarmTarget(t) {
+  if (t.mode === "log") return; // 記録のみの公演は鳴らさない
+  if (t.priority) {
+    prewarmSpeech(`${t.label}です。${t.label}が出ました。今すぐ決済してください`);
+    prewarmSpeech(`${t.label}です。急いでください`);
+  } else {
+    prewarmSpeech(`${t.label}にチケットが出ました。かごに入れてください`);
+    if (t.mode === "arena") prewarmSpeech(`${t.label}にアリーナ席が出ました。かごに入れてください`);
+  }
+}
+TARGETS.forEach(prewarmTarget);
 
 while (true) {
   const t0 = Date.now();

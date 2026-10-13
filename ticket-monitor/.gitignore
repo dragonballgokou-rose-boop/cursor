@@ -3,3 +3,4 @@ node_modules/
 .ntfy-topic
 known-performances.json
 watch.log
+.say-cache/

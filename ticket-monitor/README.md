@@ -99,3 +99,26 @@ WATCH_KEYWORDS="8/23(日),8/23（日）" CHECK_INTERVAL=10 node monitor-browser.
 - 一度検知したキーワードは、掲載が続く間は再通知しません（出品が消えて再出現したら再通知）
 - 8/22・8/23 の出品はまだ存在しないため（2026-08-09時点で 8/20・8/21 のみ4件）、
   出るかどうかは出品者次第です
+
+## 分析ツール（2026-10 追加）
+
+| ファイル | 役割 |
+|---|---|
+| `trade-history.mjs` | 記録済みの出品ID（RTK_…）ごとに取引履歴APIを読み、決済成立（transfer）の時刻を `trade-history.json` にまとめる。読み取り専用 |
+| `charts/ticket-flow.html` | 出現・掲載時間・公演・席種・決済までの時間・買い手の分布を図にしたページ。ブラウザで開くだけ |
+| `RESALE-KNOWLEDGE.md` | 観測から分かったこと。§9 に遅延の内訳と取引履歴の分析 |
+
+```bash
+node trade-history.mjs            # listings-6ki-resale.csv と listings-log.csv の全IDを取得
+```
+
+## 読み上げの事前合成
+
+`monitor-api.mjs` は起動時に、検知時に言う決まり文句を `say -o` で `.say-cache/` に音声ファイルとして作っておき、
+検知時は `afplay` で再生する。`say` で直接読むと音が出るまで約1秒かかるため。
+ファイルが無いときや再生に失敗したときは従来どおり `say` で読む。
+
+| 変数 | デフォルト | 説明 |
+|---|---|---|
+| `SAY_VOICE` | `Kyoko` | 読み上げの声 |
+| `SAY_CACHE_DIR` | `./.say-cache` | 合成済み音声の置き場所（gitignore 済み） |
